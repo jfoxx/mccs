@@ -1,0 +1,48 @@
+.promos-wrapper {
+  padding: 0;
+  max-width: unset;
+}
+
+.promos-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.2rem;
+}
+
+.promos-item {
+  overflow: hidden;
+  line-height: 0;
+}
+
+.promos-link {
+  display: block;
+  line-height: 0;
+}
+
+.promos-link:focus-visible {
+  outline: 3px solid var(--header-navy, #1b2a6b);
+  outline-offset: -3px;
+}
+
+.promos-item picture,
+.promos-item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Tablet: 3 across */
+@media (min-width: 600px) {
+  .promos-wrapper {
+    padding: 0 var(--spacing-large, 1.6rem);
+  }
+
+  .promos-list {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.6rem;
+  }
+}

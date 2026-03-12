@@ -1,0 +1,106 @@
+.link-slider-wrapper {
+  padding: 0;
+  max-width: unset;
+  overflow: hidden;
+}
+
+/* ── Track ───────────────────────────────────────────────── */
+.link-slider-track {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-flow: row nowrap;
+  gap: 1.2rem;
+  overflow-x: scroll;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+
+  /* Hide native scrollbar — replaced by custom progress bar */
+  scrollbar-width: none;
+}
+
+.link-slider-track::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Items ───────────────────────────────────────────────── */
+.link-slider-item {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  line-height: 0;
+}
+
+.link-slider-item a {
+  display: block;
+  line-height: 0;
+}
+
+.link-slider-item picture,
+.link-slider-item img {
+  display: block;
+  height: 220px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* ── Footer: progress bar + buttons ─────────────────────── */
+.link-slider-footer {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1rem 0 0;
+}
+
+/* Progress bar — gray track, red fill */
+.link-slider-progress {
+  flex: 1;
+  height: 4px;
+  background: #d6d6d6;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.link-slider-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--header-red, #a6192e);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+/* Buttons */
+.link-slider-controls {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.4rem;
+}
+
+.link-slider-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 2.2rem;
+  line-height: 1;
+  color: #333;
+  padding: 0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.link-slider-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.link-slider-btn:hover:not(:disabled) {
+  background: var(--header-navy, #0c2340);
+  border-color: var(--header-navy, #0c2340);
+  color: #fff;
+}

@@ -1,0 +1,103 @@
+.icon-links-wrapper {
+  padding: 2.4rem var(--spacing-large, 1.6rem);
+  background: #fff;
+}
+
+.icon-links-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.8rem 0;
+}
+
+.icon-links-item {
+  flex: 0 0 calc(100% / 4);
+  display: flex;
+  justify-content: center;
+}
+
+.icon-links-anchor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1.2rem 0.8rem;
+  text-decoration: none;
+  color: #111;
+  border-radius: 6px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+  max-width: 120px;
+}
+
+.icon-links-anchor:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
+  color: #111;
+  text-decoration: none;
+}
+
+.icon-links-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+}
+
+.icon-links-icon picture,
+.icon-links-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.icon-links-label {
+  font-size: 1.3rem;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: center;
+  color: #111;
+}
+
+/* Tablet: 6 across */
+@media (min-width: 600px) {
+  .icon-links-item {
+    flex: 0 0 calc(100% / 6);
+  }
+}
+
+/* Desktop: all on one row (up to 12) */
+@media (min-width: 900px) {
+  .icon-links-wrapper {
+    padding: 2.4rem var(--spacing-xlarge, 3.2rem);
+  }
+
+  .icon-links-item {
+    flex: 1 1 0;
+    min-width: 80px;
+  }
+
+  .icon-links-anchor {
+    max-width: none;
+  }
+
+  /* When icons can't all fit in one row, switch to an exact 2-row grid.
+     --icon-half (set by JS) = ceil(count / 2), so the top row gets more
+     when the count is odd (smaller amount on the bottom). */
+  .icon-links-list.is-split {
+    display: grid;
+    grid-template-columns: repeat(var(--icon-half), 1fr);
+    gap: 0.8rem 0;
+  }
+
+  .icon-links-list.is-split .icon-links-item {
+    flex: unset;
+    min-width: unset;
+    justify-content: center;
+  }
+}
