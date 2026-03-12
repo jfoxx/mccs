@@ -168,5 +168,56 @@ export default async function decorate(block) {
   }
   while (fragment.firstElementChild) footer.append(fragment.firstElementChild);
 
+  // Structure: main (dark blue columns) + subfooter (red strip)
+  const children = [...footer.children];
+  const main = document.createElement('div');
+  main.className = 'footer-main';
+  const mainInner = document.createElement('div');
+  mainInner.className = 'footer-main-inner';
+
+  children.forEach((child, i) => {
+    if (i === children.length - 1) {
+      child.classList.add('footer-subfooter');
+      // Logo is already in the fragment — move it to the left
+      const logoEl = child.querySelector('picture, img');
+      if (logoEl) {
+        const logoLink = document.createElement('a');
+        logoLink.href = 'https://www.marines.mil/';
+        logoLink.className = 'footer-subfooter-logo';
+        logoLink.setAttribute('aria-label', 'US Marine Corps');
+        logoLink.append(logoEl);
+        child.prepend(logoLink);
+      }
+      // Wrap links in a div for right alignment
+      const linksWrap = document.createElement('div');
+      linksWrap.className = 'footer-subfooter-links';
+      while (child.children.length > 1) {
+        linksWrap.append(child.children[1]);
+      }
+      child.append(linksWrap);
+      // Inner wrapper to constrain content width
+      const subInner = document.createElement('div');
+      subInner.className = 'footer-subfooter-inner';
+      while (child.childNodes.length > 0) {
+        subInner.append(child.childNodes[0]);
+      }
+      child.append(subInner);
+    } else if (!child.classList.contains('storeview-switcher-button')) {
+      child.classList.add('footer-column');
+      if (mainInner.children.length === 0) child.classList.add('footer-column-wide');
+      mainInner.append(child);
+    }
+  });
+
+  main.append(mainInner);
+
+  // Insert main before subfooter
+  const subfooter = footer.querySelector('.footer-subfooter');
+  if (subfooter) {
+    footer.insertBefore(main, subfooter);
+  } else {
+    footer.append(main);
+  }
+
   block.append(footer);
 }

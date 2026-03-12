@@ -1,19 +1,161 @@
-footer {
-    background-color: var(--color-neutral-100);
-    font: var(--type-body-2-default-font);
-    letter-spacing: var(--type-body-2-default-letter-spacing);
-}
+/* ============================================================
+   MCCS Footer — Navy main + Red subfooter
+   ============================================================ */
 
-footer .footer > div {
-    margin: auto;
-    max-width: 1200px;
-    padding: 40px 24px 24px;
+footer {
+  font: var(--type-body-2-default-font);
 }
 
 footer .footer p {
-    margin: 0;
+  margin: 0;
 }
 
+/* ── Main footer (dark blue columns) ──────────────────────── */
+footer .footer-main {
+  background-color: var(--header-navy, #0c2340);
+  color: #fff;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+}
+
+footer .footer-main-inner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 2.4rem 3.2rem;
+  padding: 3.2rem 2.4rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  footer .footer-main .footer-column-wide {
+    grid-column: span 2;
+    max-width: 280px;
+  }
+}
+
+footer .footer-main .footer-column {
+  color: #fff;
+}
+
+footer .footer-main .footer-column h2,
+footer .footer-main .footer-column h3,
+footer .footer-main .footer-column h4,
+footer .footer-main .footer-column p,
+footer .footer-main .footer-column a {
+  color: #fff;
+}
+
+footer .footer-main .footer-column a {
+  font-size: 1.4rem;
+}
+
+footer .footer-main .footer-column a:hover {
+  color: rgb(255 255 255 / 85%);
+  text-decoration: underline;
+}
+
+footer .footer-main .footer-column h2,
+footer .footer-main .footer-column h3,
+footer .footer-main .footer-column h4 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgb(255 255 255 / 25%);
+}
+
+footer .footer-main .footer-column ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+footer .footer-main .footer-column li {
+  margin-bottom: 0.6rem;
+}
+
+/* ── Subfooter (red strip) ────────────────────────────────── */
+footer .footer-subfooter {
+  background-color: var(--header-red, #a6192e);
+  color: #fff;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  box-sizing: border-box;
+}
+
+footer .footer-subfooter-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1.2rem 2.4rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+footer .footer-subfooter-logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+footer .footer-subfooter-logo img,
+footer .footer-subfooter-logo picture {
+  display: block;
+  height: 32px;
+  width: auto;
+  filter: brightness(0) invert(1);
+}
+
+footer .footer-subfooter-logo:hover img,
+footer .footer-subfooter-logo:hover picture {
+  opacity: 0.9;
+}
+
+footer .footer-subfooter-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 1rem;
+}
+
+/* stylelint-disable no-descending-specificity */
+footer .footer-subfooter-links a,
+footer .footer-subfooter-links p {
+  color: #fff;
+  font-size: 1.4rem;
+  text-decoration: none;
+}
+
+footer .footer-subfooter-links a:hover {
+  text-decoration: underline;
+}
+
+footer .footer-subfooter-links ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+}
+
+footer .footer-subfooter-links li {
+  display: inline;
+  margin: 0;
+}
+
+footer .footer-subfooter-links li:not(:last-child)::after {
+  content: '|';
+  margin-left: 1rem;
+  opacity: 0.8;
+}
+
+/* stylelint-enable no-descending-specificity */
+
+/* stylelint-disable no-descending-specificity */
 .storeview-switcher-button {
     background: transparent;
     padding-left: 0;
