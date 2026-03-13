@@ -9,7 +9,10 @@ import {
 import { events } from '@dropins/tools/event-bus.js';
 import { FetchGraphQL } from '@dropins/tools/fetch-graphql.js';
 import {
+  buildBlock,
+  decorateBlock,
   getMetadata,
+  loadBlock,
   readBlockConfig,
   toCamelCase,
   toClassName,
@@ -351,6 +354,75 @@ export function rootLink(link) {
 }
 
 /**
+ * Restructures news pages: wraps body content in <article>, related-articles in <aside>.
+ * Target order: hero | aside (related-articles) | article (body)
+ * @param {Element} doc The document element
+ */
+function buildNewsStructure(doc) {
+  if (!doc.body.classList.contains('news')) return;
+
+  const main = doc.querySelector('main');
+  if (!main) return;
+
+  let heroSection = main.querySelector('[data-news-full-width="hero"]');
+  const relatedNewsSection = main.querySelector('[data-news-full-width="related-news"]');
+  const relatedArticlesSection = main.querySelector('.related-articles-container') || [...main.children].find((el) => el.querySelector('.related-articles'));
+
+  const bodySections = [...main.children].filter((el) => el !== heroSection && el !== relatedNewsSection && el !== relatedArticlesSection);
+
+  /* If no hero was built (e.g. h1 before picture in source), extract h1 + picture from body and create hero */
+  if (!heroSection) {
+    const h1 = main.querySelector('h1');
+    const picture = main.querySelector('picture');
+    if (h1 && picture) {
+      const heroBlock = buildBlock('hero', [[picture], [h1]]);
+      const wrapper = document.createElement('div');
+      wrapper.append(heroBlock);
+      decorateBlock(heroBlock);
+      heroSection = document.createElement('div');
+      heroSection.dataset.newsFullWidth = 'hero';
+      heroSection.classList.add('section');
+      heroSection.dataset.sectionStatus = 'initialized';
+      heroSection.style.display = 'none';
+      heroSection.append(wrapper);
+    }
+  }
+
+  const ordered = [];
+
+  if (heroSection) ordered.push(heroSection);
+
+  const aside = document.createElement('aside');
+  aside.className = 'news-related-aside';
+  if (relatedArticlesSection) {
+    aside.append(relatedArticlesSection);
+  } else {
+    const section = document.createElement('div');
+    section.classList.add('section');
+    section.dataset.sectionStatus = 'initialized';
+    const wrapper = document.createElement('div');
+    const relatedArticlesBlock = buildBlock('related-articles', [[]]);
+    wrapper.append(relatedArticlesBlock);
+    section.append(wrapper);
+    decorateBlock(relatedArticlesBlock);
+    aside.append(section);
+    loadBlock(relatedArticlesBlock);
+  }
+
+  const article = document.createElement('article');
+  article.className = 'news-article-body';
+  if (relatedNewsSection) article.append(relatedNewsSection);
+  bodySections.forEach((s) => article.append(s));
+
+  const contentWrapper = document.createElement('div');
+  contentWrapper.className = 'news-content-wrapper';
+  contentWrapper.append(aside, article);
+  ordered.push(contentWrapper);
+
+  ordered.forEach((el) => main.append(el));
+}
+
+/**
  * Decorates Columns Template to the main element.
  * @param {Element} doc The document element
  */
@@ -378,6 +450,9 @@ function buildTemplateColumns(doc) {
  * @param {Element} doc The document element
  */
 export function applyTemplates(doc) {
+  if (doc.body.classList.contains('news')) {
+    buildNewsStructure(doc);
+  }
   if (doc.body.classList.contains('columns')) {
     buildTemplateColumns(doc);
   }

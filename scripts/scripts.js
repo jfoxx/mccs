@@ -37,9 +37,28 @@ function buildHeroBlock(main) {
       return; // Don't create a duplicate hero block
     }
     const section = document.createElement('div');
-    section.append(buildBlock('hero', { elems: [picture, h1] }));
+    section.dataset.newsFullWidth = 'hero';
+    section.append(buildBlock('hero', [[picture], [h1]]));
     main.prepend(section);
   }
+}
+
+/**
+ * Builds related-news block and inserts after hero on news pages.
+ * @param {Element} main The container element
+ */
+function buildRelatedNewsBlock(main) {
+  if (!main.isConnected) return; /* skip fragments (e.g. footer) */
+  if (!document.body.classList.contains('news')) return;
+  if (main.querySelector('.related-news')) return;
+
+  const heroSection = main.querySelector('.hero')?.closest('main > div') || main.querySelector(':scope > div:first-child');
+  if (!heroSection) return;
+
+  const section = document.createElement('div');
+  section.dataset.newsFullWidth = 'related-news';
+  section.append(buildBlock('related-news', [[]]));
+  heroSection.after(section);
 }
 
 /**
@@ -79,6 +98,7 @@ function buildAutoBlocks(main) {
     }
 
     if (!main.querySelector('.hero')) buildHeroBlock(main);
+    buildRelatedNewsBlock(main);
   } catch (error) {
     console.error('Auto Blocking failed', error);
   }

@@ -88,7 +88,8 @@
   --spacing-huge: 120px;
   --spacing-xhuge: 144px;
   --spacing-xxhuge: 192px;
-  --type-base-font-family: 'Inter', system-ui, sans-serif;
+  --type-base-font-family: 'Noto Sans', system-ui, sans-serif;
+  --type-headline-font-family: 'DM Serif Text', serif;
   --type-display-1-font: normal normal 300 6rem/7.2rem var(--type-base-font-family);
   --type-display-1-letter-spacing: 0;
   --type-display-2-font: normal normal 300 4.8rem/5.6rem var(--type-base-font-family);
@@ -125,7 +126,7 @@
   --type-details-overline-letter-spacing: 0.16em;
 
   /* Additional tokens */
-  --type-fixed-font-family: "Roboto Mono", menlo, consolas, "Liberation Mono", monospace, system-ui, sans-serif;
+  --type-fixed-font-family: ui-monospace, menlo, consolas, "Liberation Mono", monospace, system-ui, sans-serif;
   --background-color: var(--color-neutral-50);
   --nav-height: 6.4rem;
 
@@ -196,6 +197,13 @@ h6 {
 h1 {
   font: var(--type-display-1-font);
   letter-spacing: var(--type-display-1-letter-spacing);
+}
+
+/* News article headlines use DM Serif Text */
+body.news .hero h1 {
+  font-family: var(--type-headline-font-family);
+  max-width: none;
+  color: var(--color-neutral-50);
 }
 
 h2 {
@@ -599,4 +607,168 @@ main .section.dark a {
 
 main .section.dark a:hover {
   color: rgb(255 255 255 / 80%);
+}
+
+/* ── News template ────────────────────────────────────────── */
+
+/* Hero + image full width — data attribute set when section is created */
+body.news main .section[data-news-full-width="hero"] {
+  margin: 0;
+  max-width: none;
+  width: 100%;
+  display: block !important; /* override inline display:none so hero reserves row 1 */
+}
+
+body.news main .section[data-news-full-width="hero"] > div {
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+
+body.news .hero {
+  position: relative;
+  width: 100%;
+  min-height: 300px;
+  padding: 40px var(--spacing-medium);
+}
+
+/* stylelint-disable no-descending-specificity -- news/columns are mutually exclusive */
+
+/* Picture in first row — fills hero */
+body.news .hero > div:first-child {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+body.news .hero > div:first-child > div {
+  height: 100%;
+}
+
+body.news .hero picture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+body.news .hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* H1 in second row — full width, left aligns with aside */
+body.news .hero > div:last-child {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  padding: 0 var(--spacing-medium) var(--spacing-medium);
+}
+
+@media (min-width: 900px) {
+  body.news .hero > div:last-child {
+    padding-left: max(var(--spacing-big), (100vw - 1200px) / 2 + var(--spacing-big));
+    padding-right: max(var(--spacing-big), (100vw - 1200px) / 2 + var(--spacing-big));
+    padding-bottom: var(--spacing-medium);
+  }
+}
+
+body.news .hero::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to top, rgb(0 0 0 / 75%), rgb(0 0 0 / 20%) 50%, transparent);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* stylelint-enable no-descending-specificity */
+
+/* Main grid: hero full width, then aside (1/4) + article (3/4) */
+body.news main {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+/* Full-width: hero and related-news sections */
+body.news main .section[data-news-full-width] {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+/* Article and aside participate in grid on desktop */
+body.news main article.news-article-body,
+body.news main aside.news-related-aside,
+body.news main .news-content-wrapper {
+  grid-column: 1 / -1;
+}
+
+/* Wrapper: max-width 1200px, centered on mobile */
+body.news main .news-content-wrapper {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--spacing-medium);
+  padding-right: var(--spacing-medium);
+}
+
+@media (min-width: 900px) {
+  body.news main {
+    grid-template:
+      "hero" auto
+      "content" 1fr
+      / 1fr;
+    gap: var(--spacing-medium);
+  }
+
+  body.news main .section[data-news-full-width] {
+    grid-column: 1 / -1;
+    grid-area: hero;
+  }
+
+  /* Wrapper: max-width 1200px, centered (equal left/right margins) */
+  body.news main .news-content-wrapper {
+    grid-area: content;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--spacing-big);
+    padding-right: var(--spacing-big);
+    display: grid;
+    grid-template-columns: 1fr 3fr;
+    column-gap: calc(var(--spacing-medium) + 30px);
+  }
+
+  body.news main .news-content-wrapper .news-related-aside {
+    grid-column: 1;
+    align-self: start;
+  }
+
+  body.news main .news-content-wrapper .news-article-body {
+    grid-column: 2;
+  }
+
+  body.news main .news-content-wrapper .news-article-body > div {
+    max-width: none;
+  }
+}
+
+/* News article body — 3/4 of area, readable width within */
+body.news main .default-content-wrapper {
+  max-width: 72ch;
+}
+
+/* Published/updated date from metadata */
+body.news .article-date {
+  font: var(--type-details-caption-1-font);
+  letter-spacing: var(--type-details-caption-1-letter-spacing);
+  color: var(--color-neutral-600);
+  margin-bottom: var(--spacing-medium);
 }
