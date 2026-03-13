@@ -34,7 +34,7 @@
     font-family: var(--type-base-font-family);
     display: grid;
     grid-template-columns: repeat(var(--grid-1-columns), 1fr);
-    grid-column-gap: var(--grid-1-gutters);
+    column-gap: var(--grid-1-gutters);
     margin-top: var(--spacing-medium);
 }
 
@@ -142,7 +142,7 @@
 @media (min-width: 768px) {
     #mini-pdp-modal .mini-pdp__wrapper {
         grid-template-columns: repeat(var(--grid-2-columns), 1fr);
-        grid-gap: var(--grid-2-gutters) var(--grid-2-gutters);
+        gap: var(--grid-2-gutters) var(--grid-2-gutters);
     }
 
     #mini-pdp-modal .mini-pdp__header {
