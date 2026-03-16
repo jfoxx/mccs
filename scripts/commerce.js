@@ -365,10 +365,9 @@ function buildNewsStructure(doc) {
   if (!main) return;
 
   let heroSection = main.querySelector('[data-news-full-width="hero"]');
-  const relatedNewsSection = main.querySelector('[data-news-full-width="related-news"]');
   const relatedArticlesSection = main.querySelector('.related-articles-container') || [...main.children].find((el) => el.querySelector('.related-articles'));
 
-  const bodySections = [...main.children].filter((el) => el !== heroSection && el !== relatedNewsSection && el !== relatedArticlesSection);
+  const bodySections = [...main.children].filter((el) => el !== heroSection && el !== relatedArticlesSection);
 
   /* If no hero was built (e.g. h1 before picture in source), extract h1 + picture from body and create hero */
   if (!heroSection) {
@@ -411,7 +410,6 @@ function buildNewsStructure(doc) {
 
   const article = document.createElement('article');
   article.className = 'news-article-body';
-  if (relatedNewsSection) article.append(relatedNewsSection);
   bodySections.forEach((s) => article.append(s));
 
   const contentWrapper = document.createElement('div');
