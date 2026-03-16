@@ -44,24 +44,6 @@ function buildHeroBlock(main) {
 }
 
 /**
- * Builds related-news block and inserts after hero on news pages.
- * @param {Element} main The container element
- */
-function buildRelatedNewsBlock(main) {
-  if (!main.isConnected) return; /* skip fragments (e.g. footer) */
-  if (!document.body.classList.contains('news')) return;
-  if (main.querySelector('.related-news')) return;
-
-  const heroSection = main.querySelector('.hero')?.closest('main > div') || main.querySelector(':scope > div:first-child');
-  if (!heroSection) return;
-
-  const section = document.createElement('div');
-  section.dataset.newsFullWidth = 'related-news';
-  section.append(buildBlock('related-news', [[]]));
-  heroSection.after(section);
-}
-
-/**
  * load fonts.css and set a session storage flag
  */
 async function loadFonts() {
@@ -98,7 +80,6 @@ function buildAutoBlocks(main) {
     }
 
     if (!main.querySelector('.hero')) buildHeroBlock(main);
-    buildRelatedNewsBlock(main);
   } catch (error) {
     console.error('Auto Blocking failed', error);
   }
