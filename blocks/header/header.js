@@ -136,11 +136,30 @@ async function buildLocationModal(locationBtn) {
     modal.append(hero);
   }
 
+  // ── Location URL builder ───────────────────────────────────────────────────
+  function buildLocationUrl(name) {
+    const slug = name.toLowerCase().replace(/\s+/g, '-');
+    const { hostname, pathname } = window.location;
+    // Match AEM preview/live hostnames: main--mccs--owner.aem.page / .aem.live
+    const match = hostname.match(/^(main)--([^-]+(?:-[^-]+)*)--([\w-]+)\.(aem\.(page|live))$/);
+    if (match) {
+      const [, branch, , owner, tld] = match;
+      return `https://${branch}--${slug}-mccs--${owner}.${tld}/`;
+    }
+    // Fallback for localhost / unknown hostnames
+    return null;
+  }
+
   // ── Location selection handler ─────────────────────────────────────────────
   function selectLocation(name) {
     localStorage.setItem(LOCATION_KEY, name);
-    updateLocationLabel(locationBtn, name);
-    closeModal(); // eslint-disable-line no-use-before-define
+    const url = buildLocationUrl(name);
+    if (url) {
+      window.location.href = url;
+    } else {
+      updateLocationLabel(locationBtn, name);
+      closeModal(); // eslint-disable-line no-use-before-define
+    }
   }
 
   // Build a card from a name + sublabel
