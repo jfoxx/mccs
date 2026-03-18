@@ -3,6 +3,22 @@ import { loadFragment } from '../fragment/fragment.js';
 
 const LOCATION_KEY = 'mccs-location';
 
+/**
+ * Detects the current location from the hostname.
+ * e.g. main--quantico-mccs--jfoxx.aem.page → "Quantico"
+ * Returns null on the base site (main--mccs--...) or unrecognised hostnames.
+ */
+function detectLocationFromHostname() {
+  const { hostname } = window.location;
+  const match = hostname.match(/^main--([^-].*?)-mccs--[\w-]+\.aem\.(page|live)$/);
+  if (!match) return null;
+  const slug = match[1]; // e.g. "quantico" or "camp-pendleton"
+  return slug
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
 const SOCIAL_ICONS = {
   email: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>',
   facebook: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
@@ -443,9 +459,11 @@ export default async function decorate(block) {
   locationBtn.setAttribute('aria-expanded', 'false');
   locationBtn.setAttribute('aria-haspopup', 'dialog');
 
+  const detectedLocation = detectLocationFromHostname();
   const savedLocation = localStorage.getItem(LOCATION_KEY);
+  const activeLocation = detectedLocation || savedLocation || 'LOCATION';
   locationBtn.innerHTML = `
-    <span class="nav-location-label">${savedLocation || 'LOCATION'}</span>
+    <span class="nav-location-label">${activeLocation}</span>
     ${GLOBE_ICON}
   `;
 
