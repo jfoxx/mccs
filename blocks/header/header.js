@@ -139,7 +139,7 @@ async function buildLocationModal(locationBtn) {
   // ── Location URL builder ───────────────────────────────────────────────────
   function buildLocationUrl(name) {
     const slug = name.toLowerCase().replace(/\s+/g, '-');
-    const { hostname, pathname } = window.location;
+    const { hostname } = window.location;
     // Match AEM preview/live hostnames: main--mccs--owner.aem.page / .aem.live
     const match = hostname.match(/^(main)--([^-]+(?:-[^-]+)*)--([\w-]+)\.(aem\.(page|live))$/);
     if (match) {
