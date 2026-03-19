@@ -65,15 +65,6 @@ async function listSitePath(targetSite, path) {
   }
 }
 
-async function copyContent(pagePath, destSite) {
-  const body = new FormData();
-  body.append('destination', `/${state.org}/${destSite}${pagePath}`);
-  const resp = await daFetch(
-    `${DA_ORIGIN}/copy/${state.org}/${state.site}${pagePath}`,
-    { method: 'POST', body },
-  );
-  return resp.ok || resp.status === 204;
-}
 
 async function aemAdminPost(action, targetSite, pagePath) {
   const aemPath = pagePath.replace(/\.html$/, '');
@@ -204,20 +195,6 @@ async function runPreview() {
     const key = actionKey(task.pageName, task.targetSite);
 
     try {
-      if (task.action === 'overwrite') {
-        addLog(`Copying ${task.pageName} → ${task.targetSite}`, 'info');
-        const copied = await copyContent(pagePath, task.targetSite);
-        if (!copied) {
-          addLog(`Failed to copy ${task.pageName} → ${task.targetSite}`, 'error');
-          state.statuses[key] = 'error';
-          done += 1;
-          renderProgress(done, total, `Error copying ${task.pageName}`);
-          continue;
-        }
-        addLog(`Copied ${task.pageName} → ${task.targetSite}`, 'success');
-        state.statuses[key] = 'copied';
-      }
-
       addLog(`Previewing ${task.pageName} at ${task.targetSite}`, 'info');
       const previewed = await previewPage(task.targetSite, pagePath);
       if (previewed) {
@@ -233,7 +210,7 @@ async function runPreview() {
     }
 
     done += 1;
-    renderProgress(done, total, `Processed ${task.pageName} (${done}/${total})`);
+    renderProgress(done, total, `Previewing ${done}/${total}`);
     renderResultsCells();
   }
 
@@ -502,7 +479,6 @@ function renderSiteCell(key, status, currentAction, targetSite, pagePath) {
   const badgeMap = {
     exists: '<span class="msm-badge msm-badge-exists">Exists</span>',
     missing: '<span class="msm-badge msm-badge-missing">Not found</span>',
-    copied: '<span class="msm-badge msm-badge-copied">Copied</span>',
     previewed: '<span class="msm-badge msm-badge-previewed">Previewed</span>',
     published: '<span class="msm-badge msm-badge-published">Published</span>',
     error: '<span class="msm-badge msm-badge-error">Error</span>',
@@ -514,7 +490,7 @@ function renderSiteCell(key, status, currentAction, targetSite, pagePath) {
   const disabled = isProcessed || state.isProcessing ? 'disabled' : '';
 
   let options;
-  if (status === 'exists' || status === 'copied') {
+  if (status === 'exists') {
     options = `
       <option value="skip" ${currentAction === 'skip' ? 'selected' : ''}>Skip</option>
       <option value="overwrite" ${currentAction === 'overwrite' ? 'selected' : ''}>Overwrite</option>`;
