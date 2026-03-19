@@ -36,18 +36,12 @@ async function loadConfig() {
   const json = await resp.json();
   const rows = json.data ?? json;
   state.sites = rows.map((r) => {
-    const url = r.url || r.Url || r.URL || '';
-    const explicit = r.site || r.Site || r.repo || r.Repo;
-    let site = explicit;
-    if (url) {
-      const parts = url.split('/').filter(Boolean);
-      site = parts[parts.length - 1];
-    }
-    if (!site) {
-      site = (r.name || r.Name || '').toLowerCase().replace(/\s+/g, '-');
-    }
+    const raw = r.site || r.Site || r.url || r.Url || r.URL || r.repo || r.Repo || '';
+    const parts = raw.split('/').filter(Boolean);
+    const site = parts[parts.length - 1]
+      || (r.name || r.Name || '').toLowerCase().replace(/\s+/g, '-');
     return {
-      name: r.name || r.Name || explicit || site,
+      name: r.name || r.Name || site,
       site,
     };
   });
