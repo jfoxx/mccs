@@ -1,7 +1,6 @@
 import { getMetadata } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 
-
 /**
  * Detects the current location from the hostname.
  * e.g. main--quantico-mccs--jfoxx.aem.page → "Quantico"
