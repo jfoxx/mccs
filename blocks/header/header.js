@@ -1,8 +1,6 @@
 import { getMetadata } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 
-const LOCATION_KEY = 'mccs-location';
-
 /**
  * Detects the current location from the hostname.
  * e.g. main--quantico-mccs--jfoxx.aem.page → "Quantico"
@@ -168,7 +166,6 @@ async function buildLocationModal(locationBtn) {
 
   // ── Location selection handler ─────────────────────────────────────────────
   function selectLocation(name) {
-    localStorage.setItem(LOCATION_KEY, name);
     const url = buildLocationUrl(name);
     if (url) {
       window.location.href = url;
@@ -459,9 +456,7 @@ export default async function decorate(block) {
   locationBtn.setAttribute('aria-expanded', 'false');
   locationBtn.setAttribute('aria-haspopup', 'dialog');
 
-  const detectedLocation = detectLocationFromHostname();
-  const savedLocation = localStorage.getItem(LOCATION_KEY);
-  const activeLocation = detectedLocation || savedLocation || 'LOCATION';
+  const activeLocation = detectLocationFromHostname() || 'LOCATION';
   locationBtn.innerHTML = `
     <span class="nav-location-label">${activeLocation}</span>
     ${GLOBE_ICON}
