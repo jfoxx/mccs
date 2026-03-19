@@ -303,12 +303,12 @@ function render() {
   const app = $('#app');
   app.innerHTML = `
     <header class="msm-header msm-animate-in">
-      <h1>MSM Blueprint Dashboard</h1>
+      <h1>Multi-Site Manager Dashboard</h1>
       <span class="msm-org-badge">${state.org} / ${state.site}</span>
     </header>
 
     <section class="msm-sites msm-animate-in msm-stagger-1">
-      <h3>Live Copy Sites</h3>
+      <h3>Satellite Sites</h3>
       <div class="msm-site-chips">
         ${state.sites.map((s) => `<span class="msm-chip">${s.name}</span>`).join('')}
       </div>
