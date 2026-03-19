@@ -83,16 +83,13 @@ async function copyContent(pagePath, destSite) {
 
 async function aemAdminPost(action, targetSite, pagePath) {
   const aemPath = pagePath.replace(/\.html$/, '');
-  const resp = await fetch(
+  const resp = await daFetch(
     `${AEM_ORIGIN}/${action}/${state.org}/${targetSite}/main${aemPath}`,
     {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${state.token}`,
         'X-Content-Source-Authorization': `Bearer ${state.token}`,
         'Cache-Control': 'no-cache',
-        Pragma: 'no-cache',
-        'Content-Length': '0',
       },
     },
   );
