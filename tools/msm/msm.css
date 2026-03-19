@@ -673,14 +673,21 @@ body {
 .msm-log-entry .msm-log-icon {
   flex-shrink: 0;
   width: 16px;
-  text-align: center;
-  font-weight: 700;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.msm-log-success .msm-log-icon { color: var(--s2-green-500); }
-.msm-log-error .msm-log-icon { color: var(--s2-red-500); }
-.msm-log-info .msm-log-icon { color: var(--s2-blue-500); }
-.msm-log-warn .msm-log-icon { color: var(--s2-orange-500); }
+.msm-log-entry .msm-log-icon img {
+  width: 14px;
+  height: 14px;
+}
+
+.msm-log-success .msm-log-icon img { filter: brightness(0) saturate(100%) invert(38%) sepia(72%) saturate(488%) hue-rotate(110deg) brightness(92%) contrast(91%); }
+.msm-log-error .msm-log-icon img { filter: brightness(0) saturate(100%) invert(28%) sepia(93%) saturate(2148%) hue-rotate(342deg) brightness(87%) contrast(89%); }
+.msm-log-info .msm-log-icon img { filter: brightness(0) saturate(100%) invert(32%) sepia(93%) saturate(1735%) hue-rotate(203deg) brightness(97%) contrast(87%); }
+.msm-log-warn .msm-log-icon img { filter: brightness(0) saturate(100%) invert(55%) sepia(86%) saturate(632%) hue-rotate(357deg) brightness(97%) contrast(88%); }
 
 .msm-log-time {
   color: var(--s2-gray-300);
