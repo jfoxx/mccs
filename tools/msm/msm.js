@@ -35,11 +35,22 @@ async function loadConfig() {
   if (!resp.ok) throw new Error(`Failed to load MSM config (${resp.status})`);
   const json = await resp.json();
   const rows = json.data ?? json;
-  state.sites = rows.map((r) => ({
-    name: r.name || r.Name || r.site || r.Site || r.repo || r.Repo,
-    site: r.site || r.Site || r.repo || r.Repo
-      || (r.name || r.Name || '').toLowerCase().replace(/\s+/g, '-'),
-  }));
+  state.sites = rows.map((r) => {
+    const url = r.url || r.Url || r.URL || '';
+    const explicit = r.site || r.Site || r.repo || r.Repo;
+    let site = explicit;
+    if (url) {
+      const parts = url.split('/').filter(Boolean);
+      site = parts[parts.length - 1];
+    }
+    if (!site) {
+      site = (r.name || r.Name || '').toLowerCase().replace(/\s+/g, '-');
+    }
+    return {
+      name: r.name || r.Name || explicit || site,
+      site,
+    };
+  });
 }
 
 async function listPath(path) {
@@ -70,20 +81,30 @@ async function copyContent(pagePath, destSite) {
   return resp.ok || resp.status === 204;
 }
 
-async function previewPage(targetSite, pagePath) {
+async function aemAdminPost(action, targetSite, pagePath) {
   const aemPath = pagePath.replace(/\.html$/, '');
-  const resp = await daFetch(`${AEM_ORIGIN}/preview/${state.org}/${targetSite}/main${aemPath}`, {
-    method: 'POST',
-  });
+  const resp = await fetch(
+    `${AEM_ORIGIN}/${action}/${state.org}/${targetSite}/main${aemPath}`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${state.token}`,
+        'X-Content-Source-Authorization': `Bearer ${state.token}`,
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+        'Content-Length': '0',
+      },
+    },
+  );
   return resp.ok;
 }
 
+async function previewPage(targetSite, pagePath) {
+  return aemAdminPost('preview', targetSite, pagePath);
+}
+
 async function publishPage(targetSite, pagePath) {
-  const aemPath = pagePath.replace(/\.html$/, '');
-  const resp = await daFetch(`${AEM_ORIGIN}/live/${state.org}/${targetSite}/main${aemPath}`, {
-    method: 'POST',
-  });
-  return resp.ok;
+  return aemAdminPost('live', targetSite, pagePath);
 }
 
 /* ------------------------------------------------------------------ */
@@ -111,13 +132,11 @@ function addLog(message, type = 'info') {
 }
 
 function getActionSummary() {
-  let overwrite = 0;
-  let publish = 0;
+  let include = 0;
   Object.entries(state.actions).forEach(([, action]) => {
-    if (action === 'overwrite') overwrite += 1;
-    if (action === 'publish') publish += 1;
+    if (action === 'overwrite') include += 1;
   });
-  return { overwrite, publish, total: overwrite + publish };
+  return { include, total: include };
 }
 
 /* ------------------------------------------------------------------ */
@@ -449,8 +468,7 @@ function renderResultsTable() {
             <select class="msm-select msm-bulk-select" data-site="${s.site}">
               <option value="">Bulk…</option>
               <option value="skip">All: Skip</option>
-              <option value="overwrite">All: Overwrite</option>
-              <option value="publish">All: Publish</option>
+              <option value="overwrite">All: Include</option>
             </select>
           </th>`).join('')}
         </tr>
@@ -508,12 +526,11 @@ function renderSiteCell(key, status, currentAction, targetSite, pagePath) {
   if (status === 'exists' || status === 'copied') {
     options = `
       <option value="skip" ${currentAction === 'skip' ? 'selected' : ''}>Skip</option>
-      <option value="overwrite" ${currentAction === 'overwrite' ? 'selected' : ''}>Overwrite</option>
-      <option value="publish" ${currentAction === 'publish' ? 'selected' : ''}>Publish</option>`;
+      <option value="overwrite" ${currentAction === 'overwrite' ? 'selected' : ''}>Overwrite</option>`;
   } else {
     options = `
       <option value="skip" ${currentAction === 'skip' ? 'selected' : ''}>Skip</option>
-      <option value="overwrite" ${currentAction === 'overwrite' ? 'selected' : ''}>Copy &amp; Preview</option>`;
+      <option value="overwrite" ${currentAction === 'overwrite' ? 'selected' : ''}>Include</option>`;
   }
 
   let previewLink = '';
@@ -574,9 +591,8 @@ function renderActionBar() {
         </button>
       </div>
       <div class="msm-action-summary">
-        <strong>${summary.overwrite}</strong> overwrite ·
-        <strong>${summary.publish}</strong> publish ·
-        <strong>${state.pages.length * state.sites.length - summary.total}</strong> skip
+        <strong>${summary.include}</strong> included ·
+        <strong>${state.pages.length * state.sites.length - summary.total}</strong> skipped
       </div>
     </div>`;
 
@@ -675,7 +691,6 @@ function onBulkAction(e) {
     const status = state.statuses[key];
     if (['previewed', 'published', 'error'].includes(status)) return;
 
-    if (action === 'publish' && status !== 'exists') return;
     state.actions[key] = action;
   });
 
