@@ -616,7 +616,10 @@ function renderLog() {
   }
 
   const iconMap = {
-    success: '✓', error: '✗', info: 'ℹ', warn: '⚠',
+    success: '<img src="icons/CheckmarkSize100.svg" alt="success">',
+    error: '<img src="icons/CrossSize100.svg" alt="error">',
+    info: '<img src="icons/InfoSmall.svg" alt="info">',
+    warn: '<img src="icons/AlertSmall.svg" alt="warning">',
   };
 
   area.innerHTML = `
