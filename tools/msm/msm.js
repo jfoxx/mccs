@@ -72,10 +72,6 @@ async function aemAdminPost(action, targetSite, pagePath) {
     `${AEM_ORIGIN}/${action}/${state.org}/${targetSite}/main${aemPath}`,
     {
       method: 'POST',
-      headers: {
-        'X-Content-Source-Authorization': `Bearer ${state.token}`,
-        'Cache-Control': 'no-cache',
-      },
     },
   );
   return resp.ok;
