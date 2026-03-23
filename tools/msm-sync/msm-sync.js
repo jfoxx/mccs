@@ -32,9 +32,9 @@ const $ = (sel) => document.querySelector(sel);
 
 async function loadConfig() {
   const resp = await daFetch(
-    `${CONTENT_ORIGIN}/${state.org}/${state.site}/.da/content-sync.json`,
+    `${CONTENT_ORIGIN}/${state.org}/${state.site}/.da/msm-sync.json`,
   );
-  if (!resp.ok) throw new Error(`Failed to load content-sync config (${resp.status})`);
+  if (!resp.ok) throw new Error(`Failed to load msm-sync config (${resp.status})`);
   const json = await resp.json();
   const rows = json.data ?? json;
   const row = Array.isArray(rows) ? rows[0] : rows;
@@ -46,7 +46,7 @@ async function loadConfig() {
     site: parts[parts.length - 1] || '',
   };
 
-  if (!state.source.site) throw new Error('No source site defined in content-sync config');
+  if (!state.source.site) throw new Error('No source site defined in msm-sync config');
 }
 
 async function listSourcePath(path) {

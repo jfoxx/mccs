@@ -143,8 +143,6 @@ export default async function decorate(block) {
     block.append(slideIndicatorsNav);
   }
 
-  shuffleArray(rows);
-
   rows.forEach((row, idx) => {
     const slide = createSlide(row, idx, carouselId);
     slidesWrapper.append(slide);
