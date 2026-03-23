@@ -1,12 +1,9 @@
 // eslint-disable-next-line import/no-unresolved
-import DA_SDK from 'https://da.live/nx/utils/sdk.js';
-// eslint-disable-next-line import/no-unresolved
 import { daFetch } from 'https://da.live/nx/utils/daFetch.js';
 // eslint-disable-next-line import/no-unresolved
 import { crawl } from 'https://da.live/nx/public/utils/tree.js';
 
 const DA_ORIGIN = 'https://admin.da.live';
-const CONTENT_ORIGIN = 'https://content.da.live';
 
 const state = {
   org: '',
@@ -29,25 +26,6 @@ const $ = (sel) => document.querySelector(sel);
 /* ------------------------------------------------------------------ */
 /*  API                                                                */
 /* ------------------------------------------------------------------ */
-
-async function loadConfig() {
-  const resp = await daFetch(
-    `${CONTENT_ORIGIN}/${state.org}/${state.site}/.da/msm-sync.json`,
-  );
-  if (!resp.ok) throw new Error(`Failed to load msm-sync config (${resp.status})`);
-  const json = await resp.json();
-  const rows = json.data ?? json;
-  const row = Array.isArray(rows) ? rows[0] : rows;
-
-  const raw = row.site || row.Site || row.url || row.Url || row.URL || '';
-  const parts = raw.split('/').filter(Boolean);
-  state.source = {
-    name: row.name || row.Name || parts[parts.length - 1] || 'Source',
-    site: parts[parts.length - 1] || '',
-  };
-
-  if (!state.source.site) throw new Error('No source site defined in msm-sync config');
-}
 
 async function listSourcePath(path) {
   const clean = path.replace(/\/+$/, '') || '/';
@@ -339,14 +317,8 @@ async function onCopy(pageName) {
 /*  Rendering                                                          */
 /* ------------------------------------------------------------------ */
 
-function render() {
-  const app = $('#app');
-  app.innerHTML = `
-    <header class="sync-header">
-      <h1>Content Sync</h1>
-      <span class="sync-badge">${state.org} / ${state.site}</span>
-    </header>
-
+function render(container) {
+  container.innerHTML = `
     <section class="sync-source-info">
       <h3>Source</h3>
       <div class="sync-source-detail">
@@ -621,24 +593,12 @@ function bindTableEvents() {
 /*  Init                                                               */
 /* ------------------------------------------------------------------ */
 
-async function init() {
-  try {
-    const { context, token } = await DA_SDK;
-    state.org = context.org;
-    state.site = context.repo;
-    state.token = token;
-
-    await loadConfig();
-    render();
-  } catch (err) {
-    const app = $('#app');
-    app.innerHTML = `
-      <div class="sync-error-banner">
-        Failed to initialize: ${err.message}.
-        Ensure content-sync.json exists in your site's .da folder.
-      </div>`;
-  }
-  document.body.style.display = '';
+// eslint-disable-next-line import/prefer-default-export
+export function initSatellite({
+  org, site, config, container,
+}) {
+  state.org = org;
+  state.site = site;
+  state.source = config.source;
+  render(container);
 }
-
-init();
