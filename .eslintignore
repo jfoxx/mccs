@@ -1,7 +1,6 @@
 helix-importer-ui
 *.min.js
 scripts/acdl
-tools/msm
 tools/picker
 tools/segments
 tools/importer/*

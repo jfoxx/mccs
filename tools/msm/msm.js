@@ -1,5 +1,9 @@
+// eslint-disable-next-line import/no-unresolved
 import DA_SDK from 'https://da.live/nx/utils/sdk.js';
+// eslint-disable-next-line import/no-unresolved
 import { daFetch } from 'https://da.live/nx/utils/daFetch.js';
+// eslint-disable-next-line import/no-unresolved
+import { crawl } from 'https://da.live/nx/public/utils/tree.js';
 
 const DA_ORIGIN = 'https://admin.da.live';
 const AEM_ORIGIN = 'https://admin.hlx.page';
@@ -20,6 +24,8 @@ const state = {
   isProcessing: false,
   filter: '',
   log: [],
+  treeData: {},
+  treeLoading: false,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -65,17 +71,12 @@ async function listSitePath(targetSite, path) {
   }
 }
 
-
 async function aemAdminPost(action, targetSite, pagePath) {
   const aemPath = pagePath.replace(/\.html$/, '');
   const resp = await daFetch(
     `${AEM_ORIGIN}/${action}/${state.org}/${targetSite}/main${aemPath}`,
     {
       method: 'POST',
-      headers: {
-        'X-Content-Source-Authorization': `Bearer ${state.token}`,
-        'Cache-Control': 'no-cache',
-      },
     },
   );
   return resp.ok;
@@ -159,6 +160,41 @@ async function browse(path) {
   }
 }
 
+async function browseSinglePage(filePath) {
+  const parentPath = filePath.substring(0, filePath.lastIndexOf('/')) || '/';
+  const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+
+  state.currentPath = parentPath;
+  state.pages = [];
+  state.folders = [];
+  state.siteContent = {};
+  state.actions = {};
+  state.statuses = {};
+  state.previewDone = false;
+  state.filter = '';
+
+  renderResults(true);
+
+  try {
+    state.pages = [{ name: fileName, ext: 'html' }];
+
+    await checkSiteExistence(parentPath);
+
+    state.pages.forEach((page) => {
+      state.sites.forEach((site) => {
+        const key = actionKey(page.name, site.site);
+        const exists = state.siteContent[site.site]?.has(page.name);
+        state.actions[key] = 'skip';
+        state.statuses[key] = exists ? 'exists' : 'missing';
+      });
+    });
+
+    renderResults();
+  } catch (err) {
+    renderError(err.message);
+  }
+}
+
 async function checkSiteExistence(path) {
   const checks = state.sites.map(async (site) => {
     const items = await listSitePath(site.site, path);
@@ -167,6 +203,149 @@ async function checkSiteExistence(path) {
     );
   });
   await Promise.all(checks);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Page Tree                                                          */
+/* ------------------------------------------------------------------ */
+
+async function loadTree() {
+  state.treeLoading = true;
+  renderTree();
+
+  try {
+    const files = [];
+    const path = `/${state.org}/${state.site}/`;
+    const basePath = `/${state.org}/${state.site}`;
+
+    const { results } = crawl({
+      path,
+      callback: (item) => {
+        if (item.path.endsWith('.html')) files.push(item);
+      },
+      concurrent: 50,
+      throttle: 3,
+    });
+
+    await results;
+    state.treeData = buildTreeStructure(files, basePath);
+  } catch (err) {
+    state.treeData = {};
+    addLog(`Failed to load page tree: ${err.message}`, 'error');
+  }
+
+  state.treeLoading = false;
+  renderTree();
+}
+
+function buildTreeStructure(files, basePath) {
+  const tree = {};
+  files.forEach((file) => {
+    const displayPath = file.path.replace(basePath, '');
+    const parts = displayPath.split('/').filter(Boolean);
+    let current = tree;
+    parts.forEach((part, i) => {
+      if (!current[part]) {
+        current[part] = {
+          isFile: i === parts.length - 1,
+          children: {},
+          path: `/${parts.slice(0, i + 1).join('/')}`,
+        };
+      }
+      current = current[part].children;
+    });
+  });
+  return tree;
+}
+
+function renderTree() {
+  const panel = $('#tree-panel');
+  if (!panel) return;
+
+  if (state.treeLoading) {
+    panel.innerHTML = `
+      <div class="msm-tree-loading">
+        <div class="msm-spinner"></div>
+        <p>Loading page tree…</p>
+      </div>`;
+    return;
+  }
+
+  const hasNodes = Object.keys(state.treeData).length > 0;
+  if (!hasNodes) {
+    panel.innerHTML = '<p class="msm-tree-empty">No pages found.</p>';
+    return;
+  }
+
+  panel.innerHTML = `
+    <ul class="msm-tree-root">
+      ${renderTreeNodes(state.treeData)}
+    </ul>`;
+  bindTreeEvents();
+}
+
+function renderTreeNodes(tree) {
+  return Object.entries(tree)
+    .sort(([a, aNode], [b, bNode]) => {
+      if (!aNode.isFile && bNode.isFile) return -1;
+      if (aNode.isFile && !bNode.isFile) return 1;
+      return a.localeCompare(b);
+    })
+    .map(([name, node]) => {
+      if (node.isFile) {
+        const displayName = name.replace('.html', '');
+        return `<li class="msm-tree-item msm-tree-file" data-path="${node.path}">
+          <img class="msm-tree-icon" src="icons/Smock_FileSingleWebPage_18_N.svg" alt="">
+          <span class="msm-tree-label">${displayName}</span>
+        </li>`;
+      }
+      const hasChildren = Object.keys(node.children).length > 0;
+      return `<li class="msm-tree-item msm-tree-folder">
+        <div class="msm-tree-folder-row" data-path="${node.path}">
+          <span class="msm-tree-arrow">▶</span>
+          <img class="msm-tree-icon" src="icons/Smock_Folder_18_N.svg" alt="">
+          <span class="msm-tree-label">${name}</span>
+        </div>
+        ${hasChildren ? `<ul class="msm-tree-children hidden">
+          ${renderTreeNodes(node.children)}
+        </ul>` : ''}
+      </li>`;
+    })
+    .join('');
+}
+
+function bindTreeEvents() {
+  document.querySelectorAll('.msm-tree-folder-row').forEach((row) => {
+    row.addEventListener('click', () => {
+      const children = row.nextElementSibling;
+      if (children) {
+        children.classList.toggle('hidden');
+        const isOpen = !children.classList.contains('hidden');
+        const arrow = row.querySelector('.msm-tree-arrow');
+        arrow.textContent = isOpen ? '▼' : '▶';
+        const icon = row.querySelector('.msm-tree-icon');
+        icon.src = isOpen
+          ? 'icons/Smock_FolderOpen_18_N.svg'
+          : 'icons/Smock_Folder_18_N.svg';
+      }
+      highlightTreeItem(row);
+      browse(row.dataset.path);
+    });
+  });
+
+  document.querySelectorAll('.msm-tree-file').forEach((file) => {
+    file.addEventListener('click', () => {
+      highlightTreeItem(file);
+      browseSinglePage(file.dataset.path);
+    });
+  });
+}
+
+function highlightTreeItem(el) {
+  document.querySelectorAll('.msm-tree-active').forEach((item) => {
+    item.classList.remove('msm-tree-active');
+  });
+  el.classList.add('msm-tree-active');
 }
 
 /* ------------------------------------------------------------------ */
@@ -186,11 +365,11 @@ async function runPreview() {
   state.isProcessing = true;
   renderActionBar();
 
-  let done = 0;
   const total = tasks.length;
   renderProgress(0, total, 'Starting preview…');
 
-  for (const task of tasks) {
+  await tasks.reduce(async (prev, task, i) => {
+    await prev;
     const pagePath = getPagePath(task.pageName);
     const key = actionKey(task.pageName, task.targetSite);
 
@@ -209,10 +388,9 @@ async function runPreview() {
       state.statuses[key] = 'error';
     }
 
-    done += 1;
-    renderProgress(done, total, `Previewing ${done}/${total}`);
+    renderProgress(i + 1, total, `Previewing ${i + 1}/${total}`);
     renderResultsCells();
-  }
+  }, Promise.resolve());
 
   state.isProcessing = false;
   state.previewDone = true;
@@ -233,11 +411,11 @@ async function runPublish() {
   state.isProcessing = true;
   renderActionBar();
 
-  let done = 0;
   const total = tasks.length;
   renderProgress(0, total, 'Starting publish…');
 
-  for (const task of tasks) {
+  await tasks.reduce(async (prev, task, i) => {
+    await prev;
     const pagePath = getPagePath(task.pageName);
     const key = actionKey(task.pageName, task.targetSite);
 
@@ -256,10 +434,9 @@ async function runPublish() {
       state.statuses[key] = 'error';
     }
 
-    done += 1;
-    renderProgress(done, total, `Published ${done}/${total}`);
+    renderProgress(i + 1, total, `Published ${i + 1}/${total}`);
     renderResultsCells();
-  }
+  }, Promise.resolve());
 
   state.isProcessing = false;
   renderProgress(total, total, 'Publish complete');
@@ -273,62 +450,53 @@ async function runPublish() {
 function render() {
   const app = $('#app');
   app.innerHTML = `
-    <header class="msm-header msm-animate-in">
+    <header class="msm-header">
       <h1>Multi-Site Manager Dashboard</h1>
       <span class="msm-org-badge">${state.org} / ${state.site}</span>
     </header>
 
-    <section class="msm-sites msm-animate-in msm-stagger-1">
+    <section class="msm-sites">
       <h3>Satellite Sites</h3>
       <div class="msm-site-chips">
         ${state.sites.map((s) => `<span class="msm-chip">${s.name}</span>`).join('')}
       </div>
     </section>
 
-    <section class="msm-search msm-animate-in msm-stagger-2">
-      <label for="path-input">Browse Content Path</label>
-      <div class="msm-search-row">
-        <input class="msm-input" id="path-input" type="text"
-               placeholder="/services or /about" value="${state.currentPath}">
-        <button class="msm-btn msm-btn-primary" id="browse-btn">Browse</button>
-      </div>
-      <div class="msm-filter-row" id="filter-row" style="display:none">
-        <input class="msm-input" id="filter-input" type="text"
-               placeholder="Filter results by name…">
-      </div>
-    </section>
+    <div class="msm-layout">
+      <aside class="msm-tree-panel">
+        <div class="msm-tree-header">
+          <h3>Page Tree</h3>
+        </div>
+        <div class="msm-tree-body" id="tree-panel">
+          <div class="msm-tree-loading">
+            <div class="msm-spinner"></div>
+            <p>Loading page tree…</p>
+          </div>
+        </div>
+      </aside>
 
-    <div id="breadcrumb-area"></div>
-    <div id="results-area"></div>
-    <div id="action-area"></div>
-    <div id="progress-area"></div>
-    <div id="log-area"></div>
+      <div class="msm-content">
+        <div id="breadcrumb-area"></div>
+        <div id="results-area">
+          <div class="msm-empty">
+            <div class="msm-empty-icon">📂</div>
+            <h3>Select a folder</h3>
+            <p>Choose a folder from the page tree to browse its content.</p>
+          </div>
+        </div>
+        <div id="action-area"></div>
+        <div id="progress-area"></div>
+        <div id="log-area"></div>
+      </div>
+    </div>
   `;
 
-  bindCoreEvents();
-}
-
-function bindCoreEvents() {
-  $('#browse-btn').addEventListener('click', () => {
-    const path = $('#path-input').value.trim() || '/';
-    browse(path);
-  });
-
-  $('#path-input').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      browse(e.target.value.trim() || '/');
-    }
-  });
-
-  $('#filter-input')?.addEventListener('input', (e) => {
-    state.filter = e.target.value.toLowerCase();
-    renderResultsTable();
-  });
+  loadTree();
 }
 
 function renderBreadcrumb() {
   const parts = state.currentPath.split('/').filter(Boolean);
-  let crumbs = `<a href="#" class="msm-bc-link" data-path="/">root</a>`;
+  let crumbs = '<a href="#" class="msm-bc-link" data-path="/">root</a>';
   let accumulated = '';
   parts.forEach((p, i) => {
     accumulated += `/${p}`;
@@ -341,7 +509,7 @@ function renderBreadcrumb() {
   });
 
   const area = $('#breadcrumb-area');
-  area.innerHTML = `<nav class="msm-breadcrumb msm-animate-in">${crumbs}</nav>`;
+  area.innerHTML = `<nav class="msm-breadcrumb">${crumbs}</nav>`;
   area.querySelectorAll('.msm-bc-link').forEach((link) => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
@@ -367,7 +535,7 @@ function renderResults(loading = false) {
   const hasContent = state.pages.length > 0 || state.folders.length > 0;
   if (!hasContent) {
     $('#results-area').innerHTML = `
-      <div class="msm-results-card msm-animate-in">
+      <div class="msm-results-card">
         <div class="msm-empty">
           <div class="msm-empty-icon">📂</div>
           <h3>No content found</h3>
@@ -378,14 +546,9 @@ function renderResults(loading = false) {
     return;
   }
 
-  if (state.pages.length > 0) {
-    const filterRow = $('#filter-row');
-    if (filterRow) filterRow.style.display = 'flex';
-  }
-
   let foldersHtml = '';
   if (state.folders.length) {
-    foldersHtml = `<div class="msm-folders msm-animate-in">
+    foldersHtml = `<div class="msm-folders">
       ${state.folders.map((f) => {
     const folderPath = `${state.currentPath.replace(/\/+$/, '')}/${f.name}`;
     return `<a href="#" class="msm-folder" data-path="${folderPath}">
@@ -395,18 +558,31 @@ function renderResults(loading = false) {
     </div>`;
   }
 
+  const filterHtml = state.pages.length > 0
+    ? `<div class="msm-filter-row">
+        <sl-input id="filter-input" type="text"
+               placeholder="Filter results by name…"></sl-input>
+      </div>`
+    : '';
+
   const resultsArea = $('#results-area');
   resultsArea.innerHTML = `
     ${foldersHtml}
-    <div class="msm-results-card msm-animate-in msm-stagger-1" id="results-card">
+    <div class="msm-results-card" id="results-card">
       <div class="msm-results-header">
         <h3>Pages</h3>
         <span class="msm-results-count">${state.pages.length} page${state.pages.length !== 1 ? 's' : ''}</span>
       </div>
+      ${filterHtml}
       <div class="msm-table-wrap" id="table-wrap"></div>
     </div>`;
 
   renderResultsTable();
+
+  $('#filter-input')?.addEventListener('input', (e) => {
+    state.filter = e.target.value.toLowerCase();
+    renderResultsTable();
+  });
 
   resultsArea.querySelectorAll('.msm-folder').forEach((f) => {
     f.addEventListener('click', (e) => {
@@ -431,14 +607,20 @@ function renderResultsTable() {
       <thead>
         <tr>
           <th>Page</th>
-          ${state.sites.map((s) => `<th>
-            ${s.name}
-            <select class="msm-select msm-bulk-select" data-site="${s.site}">
-              <option value="">Bulk…</option>
-              <option value="skip">All: Skip</option>
-              <option value="overwrite">All: Include</option>
-            </select>
-          </th>`).join('')}
+          ${state.sites.map((s) => {
+    const actionable = state.pages.filter((p) => {
+      const st = state.statuses[actionKey(p.name, s.site)];
+      return !['previewed', 'published', 'error'].includes(st);
+    });
+    const allChecked = actionable.length > 0
+      && actionable.every((p) => state.actions[actionKey(p.name, s.site)] === 'overwrite');
+    return `<th>
+            <label class="msm-bulk-check">
+              <input type="checkbox" class="msm-bulk-checkbox" data-site="${s.site}" ${allChecked ? 'checked' : ''}>
+              ${s.name}
+            </label>
+          </th>`;
+  }).join('')}
         </tr>
       </thead>
       <tbody>
@@ -488,17 +670,7 @@ function renderSiteCell(key, status, currentAction, targetSite, pagePath) {
 
   const isProcessed = ['previewed', 'published', 'error'].includes(status);
   const disabled = isProcessed || state.isProcessing ? 'disabled' : '';
-
-  let options;
-  if (status === 'exists') {
-    options = `
-      <option value="skip" ${currentAction === 'skip' ? 'selected' : ''}>Skip</option>
-      <option value="overwrite" ${currentAction === 'overwrite' ? 'selected' : ''}>Overwrite</option>`;
-  } else {
-    options = `
-      <option value="skip" ${currentAction === 'skip' ? 'selected' : ''}>Skip</option>
-      <option value="overwrite" ${currentAction === 'overwrite' ? 'selected' : ''}>Include</option>`;
-  }
+  const checked = currentAction === 'overwrite' ? 'checked' : '';
 
   let previewLink = '';
   if (status === 'previewed' || status === 'published') {
@@ -509,19 +681,17 @@ function renderSiteCell(key, status, currentAction, targetSite, pagePath) {
   return `<td data-key="${key}">
     <div class="msm-site-cell">
       <div class="msm-site-status">${badge}</div>
-      <select class="msm-select msm-action-select" data-key="${key}" ${disabled}>
-        ${options}
-      </select>
+      <input type="checkbox" class="msm-action-checkbox" data-key="${key}" ${checked} ${disabled}>
       ${previewLink}
     </div>
   </td>`;
 }
 
 function renderResultsCells() {
-  document.querySelectorAll('.msm-action-select').forEach((sel) => {
-    const { key } = sel.dataset;
+  document.querySelectorAll('.msm-action-checkbox').forEach((cb) => {
+    const { key } = cb.dataset;
     const status = state.statuses[key];
-    const td = sel.closest('td');
+    const td = cb.closest('td');
     if (!td) return;
 
     const [pageName, targetSite] = key.split('::');
@@ -546,16 +716,16 @@ function renderActionBar() {
   const hasPreviewed = Object.values(state.statuses).some((s) => s === 'previewed');
 
   area.innerHTML = `
-    <div class="msm-action-bar msm-animate-in">
+    <div class="msm-action-bar">
       <div class="msm-action-buttons">
-        <button class="msm-btn msm-btn-primary" id="preview-btn"
+        <sl-button id="preview-btn"
                 ${!hasWork || state.isProcessing ? 'disabled' : ''}>
           Preview Selected (${summary.total})
-        </button>
-        <button class="msm-btn msm-btn-accent" id="publish-btn"
+        </sl-button>
+        <sl-button id="publish-btn"
                 ${!hasPreviewed || state.isProcessing ? 'disabled' : ''}>
           Publish Previewed
-        </button>
+        </sl-button>
       </div>
       <div class="msm-action-summary">
         <strong>${summary.include}</strong> included ·
@@ -573,7 +743,7 @@ function renderProgress(current, total, message) {
   const done = current === total ? ' done' : '';
 
   area.innerHTML = `
-    <div class="msm-progress msm-animate-in">
+    <div class="msm-progress">
       <div class="msm-progress-info">
         <span>${message}</span>
         <span>${pct}%</span>
@@ -599,10 +769,10 @@ function renderLog() {
   };
 
   area.innerHTML = `
-    <div class="msm-log msm-animate-in">
+    <div class="msm-log">
       <div class="msm-log-header">
         <h3>Activity Log</h3>
-        <button class="msm-btn msm-btn-sm msm-btn-secondary" id="clear-log-btn">Clear</button>
+        <sl-button id="clear-log-btn">Clear</sl-button>
       </div>
       <div class="msm-log-entries">
         ${state.log.slice().reverse().map((entry) => `
@@ -634,39 +804,37 @@ function renderError(message) {
 /* ------------------------------------------------------------------ */
 
 function bindTableEvents() {
-  document.querySelectorAll('.msm-action-select').forEach((sel) => {
-    sel.removeEventListener('change', onActionChange);
-    sel.addEventListener('change', onActionChange);
+  document.querySelectorAll('.msm-action-checkbox').forEach((cb) => {
+    cb.removeEventListener('change', onActionChange);
+    cb.addEventListener('change', onActionChange);
   });
 
-  document.querySelectorAll('.msm-bulk-select').forEach((sel) => {
-    sel.removeEventListener('change', onBulkAction);
-    sel.addEventListener('change', onBulkAction);
+  document.querySelectorAll('.msm-bulk-checkbox').forEach((cb) => {
+    cb.removeEventListener('change', onBulkAction);
+    cb.addEventListener('change', onBulkAction);
   });
 }
 
 function onActionChange(e) {
   const { key } = e.target.dataset;
-  state.actions[key] = e.target.value;
+  state.actions[key] = e.target.checked ? 'overwrite' : 'skip';
   renderActionBar();
 }
 
 function onBulkAction(e) {
   const targetSite = e.target.dataset.site;
-  const action = e.target.value;
-  if (!action) return;
+  const include = e.target.checked;
 
   state.pages.forEach((page) => {
     const key = actionKey(page.name, targetSite);
     const status = state.statuses[key];
     if (['previewed', 'published', 'error'].includes(status)) return;
 
-    state.actions[key] = action;
+    state.actions[key] = include ? 'overwrite' : 'skip';
   });
 
   renderResultsTable();
   renderActionBar();
-  e.target.value = '';
 }
 
 /* ------------------------------------------------------------------ */
@@ -690,6 +858,7 @@ async function init() {
         This app must run within the DA interface.
       </div>`;
   }
+  document.body.style.display = '';
 }
 
 init();
