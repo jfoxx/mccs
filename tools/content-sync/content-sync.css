@@ -1,0 +1,273 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Adobe Clean', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  color: #2c2c2c;
+  background: transparent;
+}
+
+#app {
+  padding: 16px;
+}
+
+/* --- Loading / Spinner --- */
+
+.cs-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 200px;
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+.cs-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e1e1e1;
+  border-top-color: #0265dc;
+  border-radius: 50%;
+  animation: cs-spin 0.7s linear infinite;
+}
+
+.cs-spinner-sm {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e1e1e1;
+  border-top-color: #0265dc;
+  border-radius: 50%;
+  animation: cs-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes cs-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* --- Panel --- */
+
+.cs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cs-section {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.cs-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #8e8e8e;
+  margin-bottom: 8px;
+}
+
+/* --- Source info --- */
+
+.cs-source-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cs-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: #f0f0f0;
+  border: 1px solid #e1e1e1;
+  color: #4b4b4b;
+}
+
+.cs-chip::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #0265dc;
+}
+
+.cs-path {
+  font-size: 11px;
+  color: #8e8e8e;
+}
+
+/* --- Page info --- */
+
+.cs-page-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cs-page-path {
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 12px;
+  color: #4b4b4b;
+  background: #f5f5f5;
+  padding: 4px 8px;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+/* --- Badges --- */
+
+.cs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 100px;
+  width: fit-content;
+}
+
+.cs-badge-exists {
+  background: #cef5e4;
+  color: #12805c;
+}
+
+.cs-badge-exists::before {
+  content: '●';
+  font-size: 8px;
+}
+
+.cs-badge-missing {
+  background: #f5f5f5;
+  color: #8e8e8e;
+  border: 1px solid #e1e1e1;
+}
+
+/* --- Actions --- */
+
+.cs-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.cs-actions sl-button {
+  flex: 1;
+}
+
+.cs-help {
+  font-size: 11px;
+  color: #8e8e8e;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.cs-no-source {
+  font-size: 12px;
+  color: #8e8e8e;
+  text-align: center;
+  padding: 8px 0;
+  margin: 0;
+}
+
+/* --- Confirm --- */
+
+.cs-confirm-box {
+  background: #fff8e6;
+  border: 1px solid #e8c400;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.cs-confirm-box p {
+  font-size: 12px;
+  color: #6e5600;
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+
+.cs-confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* --- Status --- */
+
+.cs-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.cs-status-loading {
+  background: #e0f0ff;
+  color: #0265dc;
+}
+
+.cs-status-overwrite-done,
+.cs-status-merge-done {
+  background: #cef5e4;
+  color: #12805c;
+}
+
+.cs-status-error {
+  background: #ffe0e1;
+  color: #d7373f;
+}
+
+.cs-status span {
+  flex: 1;
+}
+
+.cs-status-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.cs-icon-success {
+  filter: brightness(0) saturate(100%) invert(38%) sepia(72%) saturate(488%) hue-rotate(110deg) brightness(92%) contrast(91%);
+}
+
+.cs-icon-error {
+  filter: brightness(0) saturate(100%) invert(28%) sepia(93%) saturate(2148%) hue-rotate(342deg) brightness(87%) contrast(89%);
+}
+
+/* --- Error --- */
+
+.cs-error {
+  background: #ffe0e1;
+  border: 1px solid #d7373f;
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #c9252d;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.cs-error code {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+}
