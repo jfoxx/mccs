@@ -101,13 +101,6 @@ function createSlide(row, slideIndex, carouselId) {
   return slide;
 }
 
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-}
-
 let carouselId = 0;
 export default async function decorate(block) {
   carouselId += 1;
