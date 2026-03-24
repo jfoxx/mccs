@@ -28,6 +28,37 @@ function normalizePath(p) {
 }
 
 /**
+ * Index `path` may be a site path (/news/foo) or a full URL; always return a path for linking.
+ * @param {string} raw
+ * @returns {string|null}
+ */
+function pathFromIndexField(raw) {
+  const s = (raw || '').trim();
+  if (!s) return null;
+  if (/^https?:\/\//i.test(s)) {
+    try {
+      const u = new URL(s);
+      const pathAndQuery = `${u.pathname}${u.search || ''}`;
+      return pathAndQuery || '/';
+    } catch {
+      return null;
+    }
+  }
+  return s.startsWith('/') ? s : `/${s}`;
+}
+
+/**
+ * Join current site base with a path. Do not collapse slashes in the whole string (that breaks `http://`).
+ * @param {string} linkBase
+ * @param {string} relPath path starting with /
+ */
+function hrefOnCurrentSite(linkBase, relPath) {
+  const base = linkBase.replace(/\/$/, '');
+  const path = relPath.startsWith('/') ? relPath : `/${relPath}`;
+  return `${base}${path}`;
+}
+
+/**
  * @param {string} image
  * @param {string} assetBase origin + optional root, no trailing slash
  */
@@ -45,11 +76,10 @@ function resolveAssetUrl(image, assetBase) {
  * @param {string} linkBase base for article href (always current site so cards never link off-site)
  */
 function mapRow(item, assetBase, linkBase) {
-  const rawPath = item.path;
-  if (!rawPath) return null;
-  const relPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+  const relPath = pathFromIndexField(item.path);
+  if (!relPath) return null;
   const pathKey = normalizePath(relPath);
-  const href = `${linkBase.replace(/\/$/, '')}${relPath}`.replace(/\/+/g, '/');
+  const href = hrefOnCurrentSite(linkBase, relPath);
   const image = resolveAssetUrl(item.image, assetBase);
   if (!image) return null;
   return {
