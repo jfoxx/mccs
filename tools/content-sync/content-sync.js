@@ -29,11 +29,15 @@ function parseSiteCol(raw) {
   return parts[parts.length - 1] || '';
 }
 
+function parseBaseCol(row) {
+  return parseSiteCol(row.base || row.Base || row.primary || row.Primary);
+}
+
 async function loadConfig() {
   const resp = await daFetch(
-    `${CONTENT_ORIGIN}/${state.org}/.da/msm.json`,
+    `${CONTENT_ORIGIN}/${state.org}/.da/satellites.json`,
   );
-  if (!resp.ok) throw new Error(`MSM config not found at /${state.org}/.da/msm.json (${resp.status})`);
+  if (!resp.ok) throw new Error(`Satellite config not found at /${state.org}/.da/satellites.json (${resp.status})`);
   const json = await resp.json();
   const rows = json.data ?? json;
 
@@ -41,17 +45,17 @@ async function loadConfig() {
   rows.forEach((r) => {
     const satellite = parseSiteCol(r.satellite || r.Satellite);
     if (satellite === state.site) {
-      sourceSite = parseSiteCol(r.primary || r.Primary);
+      sourceSite = parseBaseCol(r);
     }
   });
 
-  if (!sourceSite) throw new Error(`Site "${state.site}" is not listed as a satellite in the MSM config`);
+  if (!sourceSite) throw new Error(`Site "${state.site}" is not listed as a satellite in the satellite config`);
 
   let sourceTitle = sourceSite;
   rows.forEach((r) => {
-    const primary = parseSiteCol(r.primary || r.Primary);
+    const base = parseBaseCol(r);
     const satellite = parseSiteCol(r.satellite || r.Satellite);
-    if (primary === sourceSite && !satellite) {
+    if (base === sourceSite && !satellite) {
       sourceTitle = (r.title || r.Title) || sourceSite;
     }
   });
@@ -304,7 +308,7 @@ async function init() {
     app.innerHTML = `
       <div class="cs-error">
         ${err.message}.<br>
-        Ensure <code>msm.json</code> exists in your org's <code>.da</code> folder.
+        Ensure <code>satellites.json</code> exists in your org's <code>.da</code> folder.
       </div>`;
   }
   document.body.style.display = '';
