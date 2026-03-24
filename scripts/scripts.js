@@ -6,6 +6,7 @@ import {
   decorateIcons,
   decorateBlocks,
   decorateTemplateAndTheme,
+  getMetadata,
   waitForFirstImage,
   loadSection,
   loadSections,
