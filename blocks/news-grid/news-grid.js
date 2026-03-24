@@ -1,19 +1,61 @@
 /**
- * News Grid block — fetches articles from the Base site query-index (absolute URL in
- * config) and the current site's query-index, merges them (local wins on duplicate
- * paths), and displays a grid of cards with background images, type badge, and title.
+ * News Grid block — fetches from the Base query-index (metadata) and the local index,
+ * merges (local wins on duplicate paths), and renders cards. Article links always use
+ * the current site origin + content-root, never the Base host.
+ *
+ * Page metadata (head or frontmatter → meta):
+ * - news-base-query-index-url — absolute URL to Base /news/query-index.json (optional)
+ * - content-root — path prefix for this site, e.g. /en (optional; default "")
  */
 
-import { getRootPath, getConfigValue } from '@dropins/tools/lib/aem/configs.js';
+import { getMetadata } from '../../scripts/aem.js';
 
 const QUERY_INDEX_PATH = '/news/query-index.json';
 const GRID_COUNT = 8;
 
-/** Config key: full URL to Base site news index, e.g. https://main--mccs--org.aem.live/news/query-index.json */
-const NEWS_BASE_QUERY_INDEX_URL_KEY = 'news-base-query-index-url';
+/** Meta name: full URL to Base site news index */
+const META_NEWS_BASE_QUERY_INDEX_URL = 'news-base-query-index-url';
+
+/** Meta name: site content root path prefix (replaces commerce config getRootPath) */
+const META_CONTENT_ROOT = 'content-root';
+
+function getContentRoot() {
+  return (getMetadata(META_CONTENT_ROOT) || '').replace(/\/$/, '');
+}
 
 function normalizePath(p) {
   return (p || '').replace(/\/$/, '') || '/';
+}
+
+/**
+ * Index `path` may be a site path (/news/foo) or a full URL; always return a path for linking.
+ * @param {string} raw
+ * @returns {string|null}
+ */
+function pathFromIndexField(raw) {
+  const s = (raw || '').trim();
+  if (!s) return null;
+  if (/^https?:\/\//i.test(s)) {
+    try {
+      const u = new URL(s);
+      const pathAndQuery = `${u.pathname}${u.search || ''}`;
+      return pathAndQuery || '/';
+    } catch {
+      return null;
+    }
+  }
+  return s.startsWith('/') ? s : `/${s}`;
+}
+
+/**
+ * Join current site base with a path. Do not collapse slashes in the whole string (that breaks `http://`).
+ * @param {string} linkBase
+ * @param {string} relPath path starting with /
+ */
+function hrefOnCurrentSite(linkBase, relPath) {
+  const base = linkBase.replace(/\/$/, '');
+  const path = relPath.startsWith('/') ? relPath : `/${relPath}`;
+  return `${base}${path}`;
 }
 
 /**
@@ -30,15 +72,14 @@ function resolveAssetUrl(image, assetBase) {
 
 /**
  * @param {object} item query-index row
- * @param {string} assetBase origin (+ site root) for resolving relative images
- * @param {string} linkBase same base for article href
+ * @param {string} assetBase origin (+ site root) for resolving relative images (current site)
+ * @param {string} linkBase base for article href (always current site so cards never link off-site)
  */
 function mapRow(item, assetBase, linkBase) {
-  const rawPath = item.path;
-  if (!rawPath) return null;
-  const relPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+  const relPath = pathFromIndexField(item.path);
+  if (!relPath) return null;
   const pathKey = normalizePath(relPath);
-  const href = `${linkBase.replace(/\/$/, '')}${relPath}`.replace(/\/+/g, '/');
+  const href = hrefOnCurrentSite(linkBase, relPath);
   const image = resolveAssetUrl(item.image, assetBase);
   if (!image) return null;
   return {
@@ -85,30 +126,16 @@ async function fetchIndexData(url) {
  * @returns {Promise<{path: string, title: string, image: string, type: string}[]>}
  */
 async function fetchArticles() {
-  const root = (getRootPath() || '').replace(/\/$/, '');
+  const root = getContentRoot();
   const siteBase = `${window.location.origin}${root}`;
   const localUrl = `${root}${QUERY_INDEX_PATH}`.replace(/\/+/g, '/');
 
-  let baseIndexUrl = '';
-  try {
-    const v = getConfigValue(NEWS_BASE_QUERY_INDEX_URL_KEY);
-    if (typeof v === 'string' && v.trim()) baseIndexUrl = v.trim();
-  } catch {
-    baseIndexUrl = '';
-  }
-
-  let baseOrigin = '';
-  if (baseIndexUrl) {
-    try {
-      baseOrigin = new URL(baseIndexUrl).origin;
-    } catch {
-      baseOrigin = '';
-    }
-  }
+  const metaBase = getMetadata(META_NEWS_BASE_QUERY_INDEX_URL);
+  const baseIndexUrl = metaBase.trim() ? metaBase.trim() : '';
 
   const [localRaw, baseRaw] = await Promise.all([
     fetchIndexData(localUrl),
-    baseOrigin ? fetchIndexData(baseIndexUrl) : Promise.resolve([]),
+    baseIndexUrl ? fetchIndexData(baseIndexUrl) : Promise.resolve([]),
   ]);
 
   const localMapped = uniqueByPathKey(
@@ -117,9 +144,10 @@ async function fetchArticles() {
       .filter(Boolean),
   );
 
+  // Base index rows: same paths, but hrefs/images resolve on the current site
   const baseMapped = uniqueByPathKey(
     baseRaw
-      .map((item) => mapRow(item, baseOrigin, baseOrigin))
+      .map((item) => mapRow(item, siteBase, siteBase))
       .filter(Boolean),
   );
 
