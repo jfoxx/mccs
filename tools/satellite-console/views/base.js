@@ -82,7 +82,12 @@ function getPagePath(pageName) {
 }
 
 function previewUrl(targetSite, pagePath) {
-  const aemPath = pagePath.replace(/\.html$/, '');
+  let aemPath = pagePath.replace(/\.html$/, '');
+  // Folder index pages: canonical URL is …/dir/ not …/dir/index
+  if (/\/index$/i.test(aemPath)) {
+    aemPath = aemPath.replace(/\/index$/i, '/');
+    if (aemPath === '') aemPath = '/';
+  }
   return `https://main--${targetSite}--${state.org}.aem.page${aemPath}`;
 }
 
@@ -273,7 +278,7 @@ function renderTreeNodes(tree) {
       if (node.isFile) {
         const displayName = name.replace('.html', '');
         return `<li class="sc-tree-item sc-tree-file" data-path="${node.path}">
-          <img class="sc-tree-icon" src="../icons/Smock_FileSingleWebPage_18_N.svg" alt="">
+          <img class="sc-tree-icon" src="icons/Smock_FileSingleWebPage_18_N.svg" alt="">
           <span class="sc-tree-label">${displayName}</span>
         </li>`;
       }
@@ -281,7 +286,7 @@ function renderTreeNodes(tree) {
       return `<li class="sc-tree-item sc-tree-folder">
         <div class="sc-tree-folder-row" data-path="${node.path}">
           <span class="sc-tree-arrow">▶</span>
-          <img class="sc-tree-icon" src="../icons/Smock_Folder_18_N.svg" alt="">
+          <img class="sc-tree-icon" src="icons/Smock_Folder_18_N.svg" alt="">
           <span class="sc-tree-label">${name}</span>
         </div>
         ${hasChildren ? `<ul class="sc-tree-children hidden">
@@ -303,8 +308,8 @@ function bindTreeEvents() {
         arrow.textContent = isOpen ? '▼' : '▶';
         const icon = row.querySelector('.sc-tree-icon');
         icon.src = isOpen
-          ? '../icons/Smock_FolderOpen_18_N.svg'
-          : '../icons/Smock_Folder_18_N.svg';
+          ? 'icons/Smock_FolderOpen_18_N.svg'
+          : 'icons/Smock_Folder_18_N.svg';
       }
       highlightTreeItem(row);
       browse(row.dataset.path);
@@ -734,10 +739,10 @@ function renderLog() {
   }
 
   const iconMap = {
-    success: '<img src="../icons/CheckmarkSize100.svg" alt="success">',
-    error: '<img src="../icons/CrossSize100.svg" alt="error">',
-    info: '<img src="../icons/InfoSmall.svg" alt="info">',
-    warn: '<img src="../icons/AlertSmall.svg" alt="warning">',
+    success: '<img src="icons/CheckmarkSize100.svg" alt="success">',
+    error: '<img src="icons/CrossSize100.svg" alt="error">',
+    info: '<img src="icons/InfoSmall.svg" alt="info">',
+    warn: '<img src="icons/AlertSmall.svg" alt="warning">',
   };
 
   area.innerHTML = `
