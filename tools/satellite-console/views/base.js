@@ -1,13 +1,10 @@
 // eslint-disable-next-line import/no-unresolved
-import DA_SDK from 'https://da.live/nx/utils/sdk.js';
-// eslint-disable-next-line import/no-unresolved
 import { daFetch } from 'https://da.live/nx/utils/daFetch.js';
 // eslint-disable-next-line import/no-unresolved
 import { crawl } from 'https://da.live/nx/public/utils/tree.js';
 
 const DA_ORIGIN = 'https://admin.da.live';
 const AEM_ORIGIN = 'https://admin.hlx.page';
-const CONTENT_ORIGIN = 'https://content.da.live';
 
 const state = {
   org: '',
@@ -33,25 +30,6 @@ const $ = (sel) => document.querySelector(sel);
 /* ------------------------------------------------------------------ */
 /*  API                                                                */
 /* ------------------------------------------------------------------ */
-
-async function loadConfig() {
-  const resp = await daFetch(
-    `${CONTENT_ORIGIN}/${state.org}/${state.site}/.da/msm.json`,
-  );
-  if (!resp.ok) throw new Error(`Failed to load MSM config (${resp.status})`);
-  const json = await resp.json();
-  const rows = json.data ?? json;
-  state.sites = rows.map((r) => {
-    const raw = r.site || r.Site || r.url || r.Url || r.URL || r.repo || r.Repo || '';
-    const parts = raw.split('/').filter(Boolean);
-    const site = parts[parts.length - 1]
-      || (r.name || r.Name || '').toLowerCase().replace(/\s+/g, '-');
-    return {
-      name: r.name || r.Name || site,
-      site,
-    };
-  });
-}
 
 async function listPath(path) {
   const clean = path.replace(/\/+$/, '') || '/';
@@ -264,8 +242,8 @@ function renderTree() {
 
   if (state.treeLoading) {
     panel.innerHTML = `
-      <div class="msm-tree-loading">
-        <div class="msm-spinner"></div>
+      <div class="sc-tree-loading">
+        <div class="sc-spinner"></div>
         <p>Loading page tree…</p>
       </div>`;
     return;
@@ -273,12 +251,12 @@ function renderTree() {
 
   const hasNodes = Object.keys(state.treeData).length > 0;
   if (!hasNodes) {
-    panel.innerHTML = '<p class="msm-tree-empty">No pages found.</p>';
+    panel.innerHTML = '<p class="sc-tree-empty">No pages found.</p>';
     return;
   }
 
   panel.innerHTML = `
-    <ul class="msm-tree-root">
+    <ul class="sc-tree-root">
       ${renderTreeNodes(state.treeData)}
     </ul>`;
   bindTreeEvents();
@@ -294,19 +272,19 @@ function renderTreeNodes(tree) {
     .map(([name, node]) => {
       if (node.isFile) {
         const displayName = name.replace('.html', '');
-        return `<li class="msm-tree-item msm-tree-file" data-path="${node.path}">
-          <img class="msm-tree-icon" src="icons/Smock_FileSingleWebPage_18_N.svg" alt="">
-          <span class="msm-tree-label">${displayName}</span>
+        return `<li class="sc-tree-item sc-tree-file" data-path="${node.path}">
+          <img class="sc-tree-icon" src="../msm/icons/Smock_FileSingleWebPage_18_N.svg" alt="">
+          <span class="sc-tree-label">${displayName}</span>
         </li>`;
       }
       const hasChildren = Object.keys(node.children).length > 0;
-      return `<li class="msm-tree-item msm-tree-folder">
-        <div class="msm-tree-folder-row" data-path="${node.path}">
-          <span class="msm-tree-arrow">▶</span>
-          <img class="msm-tree-icon" src="icons/Smock_Folder_18_N.svg" alt="">
-          <span class="msm-tree-label">${name}</span>
+      return `<li class="sc-tree-item sc-tree-folder">
+        <div class="sc-tree-folder-row" data-path="${node.path}">
+          <span class="sc-tree-arrow">▶</span>
+          <img class="sc-tree-icon" src="../msm/icons/Smock_Folder_18_N.svg" alt="">
+          <span class="sc-tree-label">${name}</span>
         </div>
-        ${hasChildren ? `<ul class="msm-tree-children hidden">
+        ${hasChildren ? `<ul class="sc-tree-children hidden">
           ${renderTreeNodes(node.children)}
         </ul>` : ''}
       </li>`;
@@ -315,25 +293,25 @@ function renderTreeNodes(tree) {
 }
 
 function bindTreeEvents() {
-  document.querySelectorAll('.msm-tree-folder-row').forEach((row) => {
+  document.querySelectorAll('.sc-tree-folder-row').forEach((row) => {
     row.addEventListener('click', () => {
       const children = row.nextElementSibling;
       if (children) {
         children.classList.toggle('hidden');
         const isOpen = !children.classList.contains('hidden');
-        const arrow = row.querySelector('.msm-tree-arrow');
+        const arrow = row.querySelector('.sc-tree-arrow');
         arrow.textContent = isOpen ? '▼' : '▶';
-        const icon = row.querySelector('.msm-tree-icon');
+        const icon = row.querySelector('.sc-tree-icon');
         icon.src = isOpen
-          ? 'icons/Smock_FolderOpen_18_N.svg'
-          : 'icons/Smock_Folder_18_N.svg';
+          ? '../msm/icons/Smock_FolderOpen_18_N.svg'
+          : '../msm/icons/Smock_Folder_18_N.svg';
       }
       highlightTreeItem(row);
       browse(row.dataset.path);
     });
   });
 
-  document.querySelectorAll('.msm-tree-file').forEach((file) => {
+  document.querySelectorAll('.sc-tree-file').forEach((file) => {
     file.addEventListener('click', () => {
       highlightTreeItem(file);
       browseSinglePage(file.dataset.path);
@@ -342,10 +320,10 @@ function bindTreeEvents() {
 }
 
 function highlightTreeItem(el) {
-  document.querySelectorAll('.msm-tree-active').forEach((item) => {
-    item.classList.remove('msm-tree-active');
+  document.querySelectorAll('.sc-tree-active').forEach((item) => {
+    item.classList.remove('sc-tree-active');
   });
-  el.classList.add('msm-tree-active');
+  el.classList.add('sc-tree-active');
 }
 
 /* ------------------------------------------------------------------ */
@@ -447,39 +425,33 @@ async function runPublish() {
 /*  Rendering                                                          */
 /* ------------------------------------------------------------------ */
 
-function render() {
-  const app = $('#app');
-  app.innerHTML = `
-    <header class="msm-header">
-      <h1>Multi-Site Manager Dashboard</h1>
-      <span class="msm-org-badge">${state.org} / ${state.site}</span>
-    </header>
-
-    <section class="msm-sites">
+function render(container) {
+  container.innerHTML = `
+    <section class="sc-sites">
       <h3>Satellite Sites</h3>
-      <div class="msm-site-chips">
-        ${state.sites.map((s) => `<span class="msm-chip">${s.name}</span>`).join('')}
+      <div class="sc-site-chips">
+        ${state.sites.map((s) => `<span class="sc-chip">${s.name}</span>`).join('')}
       </div>
     </section>
 
-    <div class="msm-layout">
-      <aside class="msm-tree-panel">
-        <div class="msm-tree-header">
+    <div class="sc-layout">
+      <aside class="sc-tree-panel">
+        <div class="sc-tree-header">
           <h3>Page Tree</h3>
         </div>
-        <div class="msm-tree-body" id="tree-panel">
-          <div class="msm-tree-loading">
-            <div class="msm-spinner"></div>
+        <div class="sc-tree-body" id="tree-panel">
+          <div class="sc-tree-loading">
+            <div class="sc-spinner"></div>
             <p>Loading page tree…</p>
           </div>
         </div>
       </aside>
 
-      <div class="msm-content">
+      <div class="sc-content">
         <div id="breadcrumb-area"></div>
         <div id="results-area">
-          <div class="msm-empty">
-            <div class="msm-empty-icon">📂</div>
+          <div class="sc-empty">
+            <div class="sc-empty-icon">📂</div>
             <h3>Select a folder</h3>
             <p>Choose a folder from the page tree to browse its content.</p>
           </div>
@@ -496,21 +468,21 @@ function render() {
 
 function renderBreadcrumb() {
   const parts = state.currentPath.split('/').filter(Boolean);
-  let crumbs = '<a href="#" class="msm-bc-link" data-path="/">root</a>';
+  let crumbs = '<a href="#" class="sc-bc-link" data-path="/">root</a>';
   let accumulated = '';
   parts.forEach((p, i) => {
     accumulated += `/${p}`;
-    const sep = '<span class="msm-bc-sep">/</span>';
+    const sep = '<span class="sc-bc-sep">/</span>';
     if (i === parts.length - 1) {
-      crumbs += `${sep}<span class="msm-bc-current">${p}</span>`;
+      crumbs += `${sep}<span class="sc-bc-current">${p}</span>`;
     } else {
-      crumbs += `${sep}<a href="#" class="msm-bc-link" data-path="${accumulated}">${p}</a>`;
+      crumbs += `${sep}<a href="#" class="sc-bc-link" data-path="${accumulated}">${p}</a>`;
     }
   });
 
   const area = $('#breadcrumb-area');
-  area.innerHTML = `<nav class="msm-breadcrumb">${crumbs}</nav>`;
-  area.querySelectorAll('.msm-bc-link').forEach((link) => {
+  area.innerHTML = `<nav class="sc-breadcrumb">${crumbs}</nav>`;
+  area.querySelectorAll('.sc-bc-link').forEach((link) => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       browse(link.dataset.path);
@@ -521,9 +493,9 @@ function renderBreadcrumb() {
 function renderResults(loading = false) {
   if (loading) {
     $('#results-area').innerHTML = `
-      <div class="msm-results-card">
-        <div class="msm-loading" style="min-height:200px">
-          <div class="msm-spinner"></div>
+      <div class="sc-results-card">
+        <div class="sc-loading" style="min-height:200px">
+          <div class="sc-spinner"></div>
           <p>Loading content…</p>
         </div>
       </div>`;
@@ -535,9 +507,9 @@ function renderResults(loading = false) {
   const hasContent = state.pages.length > 0 || state.folders.length > 0;
   if (!hasContent) {
     $('#results-area').innerHTML = `
-      <div class="msm-results-card">
-        <div class="msm-empty">
-          <div class="msm-empty-icon">📂</div>
+      <div class="sc-results-card">
+        <div class="sc-empty">
+          <div class="sc-empty-icon">📂</div>
           <h3>No content found</h3>
           <p>No pages found at <strong>${state.currentPath}</strong>. Try a different path.</p>
         </div>
@@ -548,18 +520,18 @@ function renderResults(loading = false) {
 
   let foldersHtml = '';
   if (state.folders.length) {
-    foldersHtml = `<div class="msm-folders">
+    foldersHtml = `<div class="sc-folders">
       ${state.folders.map((f) => {
     const folderPath = `${state.currentPath.replace(/\/+$/, '')}/${f.name}`;
-    return `<a href="#" class="msm-folder" data-path="${folderPath}">
-              <span class="msm-folder-icon">📁</span>${f.name}
+    return `<a href="#" class="sc-folder" data-path="${folderPath}">
+              <span class="sc-folder-icon">📁</span>${f.name}
             </a>`;
   }).join('')}
     </div>`;
   }
 
   const filterHtml = state.pages.length > 0
-    ? `<div class="msm-filter-row">
+    ? `<div class="sc-filter-row">
         <sl-input id="filter-input" type="text"
                placeholder="Filter results by name…"></sl-input>
       </div>`
@@ -568,13 +540,13 @@ function renderResults(loading = false) {
   const resultsArea = $('#results-area');
   resultsArea.innerHTML = `
     ${foldersHtml}
-    <div class="msm-results-card" id="results-card">
-      <div class="msm-results-header">
+    <div class="sc-results-card" id="results-card">
+      <div class="sc-results-header">
         <h3>Pages</h3>
-        <span class="msm-results-count">${state.pages.length} page${state.pages.length !== 1 ? 's' : ''}</span>
+        <span class="sc-results-count">${state.pages.length} page${state.pages.length !== 1 ? 's' : ''}</span>
       </div>
       ${filterHtml}
-      <div class="msm-table-wrap" id="table-wrap"></div>
+      <div class="sc-table-wrap" id="table-wrap"></div>
     </div>`;
 
   renderResultsTable();
@@ -584,7 +556,7 @@ function renderResults(loading = false) {
     renderResultsTable();
   });
 
-  resultsArea.querySelectorAll('.msm-folder').forEach((f) => {
+  resultsArea.querySelectorAll('.sc-folder').forEach((f) => {
     f.addEventListener('click', (e) => {
       e.preventDefault();
       browse(f.dataset.path);
@@ -603,7 +575,7 @@ function renderResultsTable() {
     : state.pages;
 
   wrap.innerHTML = `
-    <table class="msm-table">
+    <table class="sc-table">
       <thead>
         <tr>
           <th>Page</th>
@@ -615,8 +587,8 @@ function renderResultsTable() {
     const allChecked = actionable.length > 0
       && actionable.every((p) => state.actions[actionKey(p.name, s.site)] === 'overwrite');
     return `<th>
-            <label class="msm-bulk-check">
-              <input type="checkbox" class="msm-bulk-checkbox" data-site="${s.site}" ${allChecked ? 'checked' : ''}>
+            <label class="sc-bulk-check">
+              <input type="checkbox" class="sc-bulk-checkbox" data-site="${s.site}" ${allChecked ? 'checked' : ''}>
               ${s.name}
             </label>
           </th>`;
@@ -629,7 +601,7 @@ function renderResultsTable() {
     </table>`;
 
   if (!filtered.length) {
-    wrap.innerHTML += `<div class="msm-empty" style="padding:24px">
+    wrap.innerHTML += `<div class="sc-empty" style="padding:24px">
       <p>No pages match the filter.</p>
     </div>`;
   }
@@ -650,8 +622,8 @@ function renderRow(page) {
 
   return `<tr data-page="${page.name}">
     <td>
-      <span class="msm-page-name">${displayName}</span>
-      <span class="msm-page-path">${pagePath}</span>
+      <span class="sc-page-name">${displayName}</span>
+      <span class="sc-page-path">${pagePath}</span>
     </td>
     ${cells.join('')}
   </tr>`;
@@ -659,11 +631,11 @@ function renderRow(page) {
 
 function renderSiteCell(key, status, currentAction, targetSite, pagePath) {
   const badgeMap = {
-    exists: '<span class="msm-badge msm-badge-exists">Exists</span>',
-    missing: '<span class="msm-badge msm-badge-missing">Not found</span>',
-    previewed: '<span class="msm-badge msm-badge-previewed">Previewed</span>',
-    published: '<span class="msm-badge msm-badge-published">Published</span>',
-    error: '<span class="msm-badge msm-badge-error">Error</span>',
+    exists: '<span class="sc-badge sc-badge-exists">Exists</span>',
+    missing: '<span class="sc-badge sc-badge-missing">Not found</span>',
+    previewed: '<span class="sc-badge sc-badge-previewed">Previewed</span>',
+    published: '<span class="sc-badge sc-badge-published">Published</span>',
+    error: '<span class="sc-badge sc-badge-error">Error</span>',
   };
 
   const badge = badgeMap[status] || badgeMap.missing;
@@ -675,20 +647,20 @@ function renderSiteCell(key, status, currentAction, targetSite, pagePath) {
   let previewLink = '';
   if (status === 'previewed' || status === 'published') {
     const url = previewUrl(targetSite, pagePath);
-    previewLink = `<a href="${url}" target="_blank" class="msm-preview-link">↗ Preview</a>`;
+    previewLink = `<a href="${url}" target="_blank" class="sc-preview-link">↗ Preview</a>`;
   }
 
   return `<td data-key="${key}">
-    <div class="msm-site-cell">
-      <div class="msm-site-status">${badge}</div>
-      <input type="checkbox" class="msm-action-checkbox" data-key="${key}" ${checked} ${disabled}>
+    <div class="sc-site-cell">
+      <div class="sc-site-status">${badge}</div>
+      <input type="checkbox" class="sc-action-checkbox" data-key="${key}" ${checked} ${disabled}>
       ${previewLink}
     </div>
   </td>`;
 }
 
 function renderResultsCells() {
-  document.querySelectorAll('.msm-action-checkbox').forEach((cb) => {
+  document.querySelectorAll('.sc-action-checkbox').forEach((cb) => {
     const { key } = cb.dataset;
     const status = state.statuses[key];
     const td = cb.closest('td');
@@ -716,8 +688,8 @@ function renderActionBar() {
   const hasPreviewed = Object.values(state.statuses).some((s) => s === 'previewed');
 
   area.innerHTML = `
-    <div class="msm-action-bar">
-      <div class="msm-action-buttons">
+    <div class="sc-action-bar">
+      <div class="sc-action-buttons">
         <sl-button id="preview-btn"
                 ${!hasWork || state.isProcessing ? 'disabled' : ''}>
           Preview Selected (${summary.total})
@@ -727,7 +699,7 @@ function renderActionBar() {
           Publish Previewed
         </sl-button>
       </div>
-      <div class="msm-action-summary">
+      <div class="sc-action-summary">
         <strong>${summary.include}</strong> included ·
         <strong>${state.pages.length * state.sites.length - summary.total}</strong> skipped
       </div>
@@ -743,13 +715,13 @@ function renderProgress(current, total, message) {
   const done = current === total ? ' done' : '';
 
   area.innerHTML = `
-    <div class="msm-progress">
-      <div class="msm-progress-info">
+    <div class="sc-progress">
+      <div class="sc-progress-info">
         <span>${message}</span>
         <span>${pct}%</span>
       </div>
-      <div class="msm-progress-bar">
-        <div class="msm-progress-fill${done}" style="width:${pct}%"></div>
+      <div class="sc-progress-bar">
+        <div class="sc-progress-fill${done}" style="width:${pct}%"></div>
       </div>
     </div>`;
 }
@@ -762,23 +734,23 @@ function renderLog() {
   }
 
   const iconMap = {
-    success: '<img src="icons/CheckmarkSize100.svg" alt="success">',
-    error: '<img src="icons/CrossSize100.svg" alt="error">',
-    info: '<img src="icons/InfoSmall.svg" alt="info">',
-    warn: '<img src="icons/AlertSmall.svg" alt="warning">',
+    success: '<img src="../msm/icons/CheckmarkSize100.svg" alt="success">',
+    error: '<img src="../msm/icons/CrossSize100.svg" alt="error">',
+    info: '<img src="../msm/icons/InfoSmall.svg" alt="info">',
+    warn: '<img src="../msm/icons/AlertSmall.svg" alt="warning">',
   };
 
   area.innerHTML = `
-    <div class="msm-log">
-      <div class="msm-log-header">
+    <div class="sc-log">
+      <div class="sc-log-header">
         <h3>Activity Log</h3>
         <sl-button id="clear-log-btn">Clear</sl-button>
       </div>
-      <div class="msm-log-entries">
+      <div class="sc-log-entries">
         ${state.log.slice().reverse().map((entry) => `
-          <div class="msm-log-entry msm-log-${entry.type}">
-            <span class="msm-log-icon">${iconMap[entry.type] || 'ℹ'}</span>
-            <span class="msm-log-time">${entry.time}</span>
+          <div class="sc-log-entry sc-log-${entry.type}">
+            <span class="sc-log-icon">${iconMap[entry.type] || 'ℹ'}</span>
+            <span class="sc-log-time">${entry.time}</span>
             <span>${entry.message}</span>
           </div>
         `).join('')}
@@ -790,13 +762,13 @@ function renderLog() {
     area.innerHTML = '';
   });
 
-  const entries = area.querySelector('.msm-log-entries');
+  const entries = area.querySelector('.sc-log-entries');
   if (entries) entries.scrollTop = 0;
 }
 
 function renderError(message) {
   const area = $('#results-area');
-  area.innerHTML = `<div class="msm-error-banner">${message}</div>`;
+  area.innerHTML = `<div class="sc-error-banner">${message}</div>`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -804,12 +776,12 @@ function renderError(message) {
 /* ------------------------------------------------------------------ */
 
 function bindTableEvents() {
-  document.querySelectorAll('.msm-action-checkbox').forEach((cb) => {
+  document.querySelectorAll('.sc-action-checkbox').forEach((cb) => {
     cb.removeEventListener('change', onActionChange);
     cb.addEventListener('change', onActionChange);
   });
 
-  document.querySelectorAll('.msm-bulk-checkbox').forEach((cb) => {
+  document.querySelectorAll('.sc-bulk-checkbox').forEach((cb) => {
     cb.removeEventListener('change', onBulkAction);
     cb.addEventListener('change', onBulkAction);
   });
@@ -841,24 +813,12 @@ function onBulkAction(e) {
 /*  Init                                                               */
 /* ------------------------------------------------------------------ */
 
-async function init() {
-  try {
-    const { context, token } = await DA_SDK;
-    state.org = context.org;
-    state.site = context.repo;
-    state.token = token;
-
-    await loadConfig();
-    render();
-  } catch (err) {
-    const app = $('#app');
-    app.innerHTML = `
-      <div class="msm-error-banner">
-        Failed to initialize: ${err.message}.
-        This app must run within the DA interface.
-      </div>`;
-  }
-  document.body.style.display = '';
+export function initBase({
+  org, site, token, config, container,
+}) {
+  state.org = org;
+  state.site = site;
+  state.token = token;
+  state.sites = config.satellites;
+  render(container);
 }
-
-init();
