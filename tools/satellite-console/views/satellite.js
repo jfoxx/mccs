@@ -172,7 +172,9 @@ async function loadTree() {
     const { results } = crawl({
       path,
       callback: (item) => {
-        if (item.path.endsWith('.html')) files.push(item);
+        if (item.path.endsWith('.html') || item.path.endsWith('.json')) {
+          files.push(item);
+        }
       },
       concurrent: 50,
       throttle: 3,
@@ -244,9 +246,13 @@ function renderTreeNodes(tree) {
     })
     .map(([name, node]) => {
       if (node.isFile) {
-        const displayName = name.replace('.html', '');
+        const displayName = name.replace(/\.(html|json)$/, '');
+        const isJson = name.endsWith('.json');
+        const fileIcon = isJson
+          ? 'icons/Smock_FileData_18_N.svg'
+          : 'icons/Smock_FileHTML_18_N.svg';
         return `<li class="sync-tree-item sync-tree-file" data-path="${node.path}">
-          <img class="sync-tree-icon" src="icons/Smock_FileSingleWebPage_18_N.svg" alt="">
+          <img class="sync-tree-icon" src="${fileIcon}" alt="">
           <span class="sync-tree-label">${displayName}</span>
         </li>`;
       }
