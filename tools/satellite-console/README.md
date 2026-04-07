@@ -6,6 +6,8 @@ Satellite Console is a Document Authoring (da.live) tool for managing multi-site
 
 ## Prerequisites
 
+- A Base site configured in DA
+- One or more satellite sites configuredin DA using the [DA MSM - Multi-Site Management for Edge Delivery Services](https://github.com/da-sites/da-msm) endpoint as the content source in the site config
 - An authenticated [Document Authoring](https://da.live) session (the tool loads inside the DA SDK environment)
 - A `satellites.json` configuration file placed at `/.da/satellites.json` in your org's content repository
 
