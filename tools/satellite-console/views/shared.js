@@ -23,69 +23,24 @@ export function buildTreeStructure(files, basePath) {
   return tree;
 }
 
-function renderTreeNodes(tree) {
-  return Object.entries(tree)
-    .sort(([a, aNode], [b, bNode]) => {
-      if (!aNode.isFile && bNode.isFile) return -1;
-      if (aNode.isFile && !bNode.isFile) return 1;
-      return a.localeCompare(b);
-    })
-    .map(([name, node]) => {
-      if (node.isFile) {
-        const icon = name.endsWith('.json')
-          ? 'icons/Smock_FileData_18_N.svg'
-          : 'icons/Smock_FileHTML_18_N.svg';
-        return `<li class="sc-tree-item sc-tree-file" data-path="${node.path}">
-          <img class="sc-tree-icon" src="${icon}" alt="">
-          <span class="sc-tree-label">${name.replace(/\.(html|json)$/, '')}</span>
-        </li>`;
+function getFoldersAtPath(treeData, treePath) {
+  let node = treeData;
+  if (treePath !== '/') {
+    const parts = treePath.split('/').filter(Boolean);
+    for (const part of parts) {
+      if (node[part]) {
+        node = node[part].children;
+      } else {
+        return [];
       }
-      const children = Object.keys(node.children).length
-        ? `<ul class="sc-tree-children hidden">${renderTreeNodes(node.children)}</ul>`
-        : '';
-      return `<li class="sc-tree-item sc-tree-folder">
-        <div class="sc-tree-folder-row" data-path="${node.path}">
-          <span class="sc-tree-arrow">▶</span>
-          <img class="sc-tree-icon" src="icons/Smock_Folder_18_N.svg" alt="">
-          <span class="sc-tree-label">${name}</span>
-        </div>
-        ${children}
-      </li>`;
-    })
-    .join('');
+    }
+  }
+  return Object.entries(node)
+    .filter(([, n]) => !n.isFile)
+    .sort(([a], [b]) => a.localeCompare(b));
 }
 
-function highlightTreeItem(el) {
-  document.querySelectorAll('.sc-tree-active').forEach((item) => item.classList.remove('sc-tree-active'));
-  el.classList.add('sc-tree-active');
-}
-
-function bindTreeEvents(browseFn) {
-  document.querySelectorAll('.sc-tree-folder-row').forEach((row) => {
-    row.addEventListener('click', () => {
-      const ch = row.nextElementSibling;
-      if (ch) {
-        ch.classList.toggle('hidden');
-        const isOpen = !ch.classList.contains('hidden');
-        row.querySelector('.sc-tree-arrow').textContent = isOpen ? '▼' : '▶';
-        row.querySelector('.sc-tree-icon').src = isOpen
-          ? 'icons/Smock_FolderOpen_18_N.svg'
-          : 'icons/Smock_Folder_18_N.svg';
-      }
-      highlightTreeItem(row);
-      browseFn(row.dataset.path);
-    });
-  });
-
-  document.querySelectorAll('.sc-tree-file').forEach((file) => {
-    file.addEventListener('click', () => {
-      highlightTreeItem(file);
-      browseFn(file.dataset.path, true);
-    });
-  });
-}
-
-export function renderTree(panel, treeData, treeLoading, msgs, browseFn) {
+export function renderTree(panel, treeData, treeLoading, msgs, browseFn, currentPath = '/') {
   if (!panel) return;
 
   if (treeLoading) {
@@ -102,8 +57,40 @@ export function renderTree(panel, treeData, treeLoading, msgs, browseFn) {
     return;
   }
 
-  panel.innerHTML = `<ul class="sc-tree-root">${renderTreeNodes(treeData)}</ul>`;
-  bindTreeEvents(browseFn);
+  const folders = getFoldersAtPath(treeData, currentPath);
+
+  let html = '';
+  if (currentPath !== '/') {
+    const parentPath = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/';
+    html += `<a href="#" class="sc-tree-back" data-path="${parentPath}">
+      <img class="sc-tree-back-icon" src="icons/Smock_Back_18_N.svg" alt="">
+      <span>Up one level</span>
+    </a>`;
+  }
+
+  if (folders.length) {
+    html += `<ul class="sc-tree-root">${folders.map(([name, n]) => `
+      <li class="sc-tree-item">
+        <div class="sc-tree-folder-row" data-path="${n.path}">
+          <img class="sc-tree-icon" src="icons/Smock_Folder_18_N.svg" alt="">
+          <span class="sc-tree-label">${name}</span>
+          <span class="sc-tree-arrow">▶</span>
+        </div>
+      </li>`).join('')}</ul>`;
+  } else {
+    html += '<p class="sc-tree-empty">No subfolders</p>';
+  }
+
+  panel.innerHTML = html;
+
+  panel.querySelectorAll('.sc-tree-folder-row').forEach((row) => {
+    row.addEventListener('click', () => browseFn(row.dataset.path));
+  });
+
+  panel.querySelector('.sc-tree-back')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    browseFn(e.currentTarget.dataset.path);
+  });
 }
 
 /* ------------------------------------------------------------------ */

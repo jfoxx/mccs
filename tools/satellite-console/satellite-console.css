@@ -159,20 +159,33 @@
   padding: 4px 0;
 }
 
+.sc-tree-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0265dc;
+  text-decoration: none;
+  border-bottom: 1px solid #e1e1e1;
+  transition: background 150ms;
+}
+
+.sc-tree-back:hover {
+  background: #e0f0ff;
+}
+
+.sc-tree-back-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
 .sc-tree-root {
   list-style: none;
   padding: 0;
   margin: 0;
-}
-
-.sc-tree-children {
-  list-style: none;
-  padding-left: 16px;
-  margin: 0;
-}
-
-.sc-tree-children.hidden {
-  display: none;
 }
 
 .sc-tree-item {
@@ -182,8 +195,8 @@
 .sc-tree-folder-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 5px 12px;
+  gap: 6px;
+  padding: 7px 12px;
   cursor: pointer;
   font-size: 13px;
   border-radius: 4px;
@@ -194,27 +207,10 @@
   background: #e0f0ff;
 }
 
-.sc-tree-file {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 12px;
-  cursor: pointer;
-  font-size: 13px;
-  color: #4b4b4b;
-  border-radius: 4px;
-  transition: background 150ms;
-}
-
-.sc-tree-file:hover {
-  background: #e0f0ff;
-}
-
 .sc-tree-arrow {
-  font-size: 10px;
-  color: #8e8e8e;
-  width: 14px;
-  text-align: center;
+  font-size: 9px;
+  color: #b0b0b0;
+  margin-left: auto;
   flex-shrink: 0;
 }
 
@@ -228,15 +224,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.sc-tree-active {
-  background: #cce4ff;
-  font-weight: 600;
-}
-
-.sc-tree-active:hover {
-  background: #cce4ff;
 }
 
 .sc-tree-loading {
@@ -850,6 +837,13 @@
 
   .mc-header h1 {
     font-size: 22px;
+  }
+
+  .sc-table thead th:first-child,
+  .sc-table tbody td:first-child {
+    position: static;
+    box-shadow: none;
+    clip-path: none;
   }
 
   .sc-action-bar {

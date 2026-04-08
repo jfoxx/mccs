@@ -110,6 +110,7 @@ async function browse(path, isSingleFile = false) {
   state.previewDone = false;
   state.filter = '';
 
+  refreshTree();
   renderResults(true);
 
   try {
@@ -181,8 +182,8 @@ async function loadTree() {
 function refreshTree() {
   renderTree(
     $('#tree-panel'), state.treeData, state.treeLoading,
-    { loading: 'Loading page tree…', empty: 'No pages found.' },
-    browse,
+    { loading: 'Loading folder tree…', empty: 'No folders found.' },
+    browse, state.currentPath,
   );
 }
 
@@ -253,25 +254,19 @@ function render(container) {
     <div class="sc-layout">
       <aside class="sc-tree-panel">
         <div class="sc-tree-header">
-          <h3>Page Tree</h3>
+          <h3>Folders</h3>
         </div>
         <div class="sc-tree-body" id="tree-panel">
           <div class="sc-tree-loading">
             <div class="sc-spinner"></div>
-            <p>Loading page tree…</p>
+            <p>Loading folder tree…</p>
           </div>
         </div>
       </aside>
 
       <div class="sc-content">
         <div id="breadcrumb-area"></div>
-        <div id="results-area">
-          <div class="sc-empty">
-            <div class="sc-empty-icon">📂</div>
-            <h3>Select a folder</h3>
-            <p>Choose a folder from the page tree to browse its content.</p>
-          </div>
-        </div>
+        <div id="results-area"></div>
         <div id="action-area"></div>
         <div id="progress-area"></div>
         <div id="log-area"></div>
@@ -281,6 +276,7 @@ function render(container) {
 
   renderChips();
   loadTree();
+  browse('/');
 }
 
 function renderChips() {

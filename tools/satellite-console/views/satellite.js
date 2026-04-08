@@ -118,6 +118,7 @@ async function browse(path, isSingleFile = false) {
   state.copyStatuses = {};
   state.filter = '';
 
+  refreshTree();
   renderResults(true);
 
   try {
@@ -171,8 +172,8 @@ async function loadTree() {
 function refreshTree() {
   renderTree(
     $('#tree-panel'), state.treeData, state.treeLoading,
-    { loading: 'Loading source tree…', empty: 'No pages found in source.' },
-    browse,
+    { loading: 'Loading source folders…', empty: 'No folders found in source.' },
+    browse, state.currentPath,
   );
 }
 
@@ -248,31 +249,26 @@ function render(container) {
     <div class="sc-layout">
       <aside class="sc-tree-panel">
         <div class="sc-tree-header">
-          <h3>Source Pages</h3>
+          <h3>Source Folders</h3>
         </div>
         <div class="sc-tree-body" id="tree-panel">
           <div class="sc-tree-loading">
             <div class="sc-spinner"></div>
-            <p>Loading source tree…</p>
+            <p>Loading source folders…</p>
           </div>
         </div>
       </aside>
 
       <div class="sc-content">
         <div id="breadcrumb-area"></div>
-        <div id="results-area">
-          <div class="sc-empty">
-            <div class="sc-empty-icon">📂</div>
-            <h3>Select a folder or page</h3>
-            <p>Browse the source tree to find pages to copy into your site.</p>
-          </div>
-        </div>
+        <div id="results-area"></div>
         <div id="log-area"></div>
       </div>
     </div>
   `;
 
   loadTree();
+  browse('/');
 }
 
 function renderResults(loading = false) {
