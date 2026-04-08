@@ -13,6 +13,7 @@ const state = {
   org: '',
   site: '',
   sites: [],
+  hiddenSites: new Set(),
   currentPath: '/',
   pages: [],
   folders: [],
@@ -26,6 +27,10 @@ const state = {
   treeData: {},
   treeLoading: false,
 };
+
+function visibleSites() {
+  return state.sites.filter((s) => !state.hiddenSites.has(s.site));
+}
 
 /* ------------------------------------------------------------------ */
 /*  API                                                                */
@@ -193,10 +198,12 @@ async function runBatch(action) {
   const doneStatus = isPreview ? 'previewed' : 'published';
   const label = isPreview ? 'Preview' : 'Publish';
 
+  const vis = new Set(visibleSites().map((s) => s.site));
   const tasks = [];
   Object.entries(source).forEach(([key, val]) => {
     if (!keep(val)) return;
     const [pageName, targetSite] = key.split('::');
+    if (!vis.has(targetSite)) return;
     tasks.push({ pageName, targetSite, key });
   });
   if (!tasks.length) return;
@@ -240,9 +247,7 @@ function render(container) {
   container.innerHTML = `
     <section class="sc-sites">
       <h3>Satellite Sites</h3>
-      <div class="sc-site-chips">
-        ${state.sites.map((s) => `<span class="sc-chip">${s.name}</span>`).join('')}
-      </div>
+      <div class="sc-site-chips" id="site-chips"></div>
     </section>
 
     <div class="sc-layout">
@@ -274,7 +279,29 @@ function render(container) {
     </div>
   `;
 
+  renderChips();
   loadTree();
+}
+
+function renderChips() {
+  const area = $('#site-chips');
+  area.innerHTML = state.sites.map((s) => {
+    const hidden = state.hiddenSites.has(s.site);
+    return `<span class="sc-chip${hidden ? ' sc-chip-hidden' : ''}" data-site="${s.site}">${s.name}</span>`;
+  }).join('');
+
+  area.querySelectorAll('.sc-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const { site } = chip.dataset;
+      if (state.hiddenSites.has(site)) {
+        state.hiddenSites.delete(site);
+      } else {
+        state.hiddenSites.add(site);
+      }
+      renderChips();
+      if (state.pages.length) renderResults();
+    });
+  });
 }
 
 function renderResults(loading = false) {
@@ -364,7 +391,7 @@ function renderResultsTable() {
       <thead>
         <tr>
           <th>Page</th>
-          ${state.sites.map((s) => {
+          ${visibleSites().map((s) => {
     const actionable = state.pages.filter((p) => {
       const st = state.statuses[actionKey(p.name, s.site)];
       return !['previewed', 'published', 'error'].includes(st);
@@ -394,7 +421,7 @@ function renderResultsTable() {
 
 function renderRow(page) {
   const pagePath = getPagePath(page.name);
-  const cells = state.sites.map((s) => {
+  const cells = visibleSites().map((s) => {
     const key = actionKey(page.name, s.site);
     return renderSiteCell(key, state.statuses[key] || 'missing', state.actions[key] || 'skip', s.site, pagePath);
   });
@@ -459,8 +486,10 @@ function renderActionBar() {
     return;
   }
 
-  const selected = Object.values(state.actions).filter((a) => a === 'overwrite').length;
-  const hasPreviewed = Object.values(state.statuses).some((s) => s === 'previewed');
+  const vis = new Set(visibleSites().map((s) => s.site));
+  const visibleKeys = Object.keys(state.actions).filter((k) => vis.has(k.split('::')[1]));
+  const selected = visibleKeys.filter((k) => state.actions[k] === 'overwrite').length;
+  const hasPreviewed = visibleKeys.some((k) => state.statuses[k] === 'previewed');
 
   area.innerHTML = `
     <div class="sc-action-bar">
@@ -476,7 +505,7 @@ function renderActionBar() {
       </div>
       <div class="sc-action-summary">
         <strong>${selected}</strong> included ·
-        <strong>${state.pages.length * state.sites.length - selected}</strong> skipped
+        <strong>${state.pages.length * visibleSites().length - selected}</strong> skipped
       </div>
     </div>`;
 
