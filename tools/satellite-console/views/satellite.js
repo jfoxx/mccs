@@ -2,13 +2,15 @@
 import { daFetch } from 'https://da.live/nx/utils/daFetch.js';
 // eslint-disable-next-line import/no-unresolved
 import { crawl } from 'https://da.live/nx/public/utils/tree.js';
+import {
+  $, buildTreeStructure, renderTree, renderBreadcrumb, renderLog, renderError,
+} from './shared.js';
 
 const DA_ORIGIN = 'https://admin.da.live';
 
 const state = {
   org: '',
   site: '',
-  token: '',
   source: { name: '', site: '' },
   currentPath: '/',
   pages: [],
@@ -20,8 +22,6 @@ const state = {
   treeData: {},
   treeLoading: false,
 };
-
-const $ = (sel) => document.querySelector(sel);
 
 /* ------------------------------------------------------------------ */
 /*  API                                                                */
@@ -77,7 +77,7 @@ async function deleteLocalPage(pagePath) {
 /* ------------------------------------------------------------------ */
 
 function rewriteLinks(html) {
-  const src = state.source.site;
+  const { site: src } = state.source;
   const dest = state.site;
   return html
     .replaceAll(`main--${src}--${state.org}.aem.page`, `main--${dest}--${state.org}.aem.page`)
@@ -86,35 +86,32 @@ function rewriteLinks(html) {
 }
 
 function editUrl(pagePath) {
-  const clean = pagePath.replace(/\.html$/, '');
-  return `https://da.live/edit#/${state.org}/${state.site}${clean}`;
+  return `https://da.live/edit#/${state.org}/${state.site}${pagePath.replace(/\.html$/, '')}`;
 }
 
 function getPagePath(pageName) {
-  const base = state.currentPath.replace(/\/+$/, '');
-  const page = state.pages.find((p) => p.name === pageName);
-  const ext = page?.ext;
+  return `${state.currentPath.replace(/\/+$/, '')}/${pageName}`;
+}
 
-  let fileName = pageName;
-  if (ext && !pageName.toLowerCase().endsWith(`.${String(ext).toLowerCase()}`)) {
-    fileName = `${pageName}.${ext}`;
-  }
-
-  return `${base}/${fileName}`.replace(/\/+/g, '/');
+function refreshLog() {
+  renderLog($('#log-area'), state.log, () => { state.log.length = 0; });
 }
 
 function addLog(message, type = 'info') {
-  const time = new Date().toLocaleTimeString();
-  state.log.push({ message, type, time });
-  renderLog();
+  state.log.push({ message, type, time: new Date().toLocaleTimeString() });
+  refreshLog();
 }
 
 /* ------------------------------------------------------------------ */
 /*  Browse                                                             */
 /* ------------------------------------------------------------------ */
 
-async function browse(path) {
-  state.currentPath = path;
+async function browse(path, isSingleFile = false) {
+  const dir = isSingleFile
+    ? (path.substring(0, path.lastIndexOf('/')) || '/')
+    : path;
+
+  state.currentPath = dir;
   state.pages = [];
   state.folders = [];
   state.localPages = new Set();
@@ -124,35 +121,18 @@ async function browse(path) {
   renderResults(true);
 
   try {
-    const items = await listSourcePath(path);
-    state.folders = items.filter((i) => i['content-type'] === 'application/folder');
-    state.pages = items.filter((i) => i.ext === 'html');
-    state.localPages = await checkLocalExistence(path);
+    if (isSingleFile) {
+      state.pages = [{ name: path.substring(path.lastIndexOf('/') + 1), ext: 'html' }];
+    } else {
+      const items = await listSourcePath(dir);
+      state.folders = items.filter((i) => i['content-type'] === 'application/folder');
+      state.pages = items.filter((i) => i.ext === 'html');
+    }
+
+    state.localPages = await checkLocalExistence(dir);
     renderResults();
   } catch (err) {
-    renderError(err.message);
-  }
-}
-
-async function browseSinglePage(filePath) {
-  const parentPath = filePath.substring(0, filePath.lastIndexOf('/')) || '/';
-  const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
-
-  state.currentPath = parentPath;
-  state.pages = [];
-  state.folders = [];
-  state.localPages = new Set();
-  state.copyStatuses = {};
-  state.filter = '';
-
-  renderResults(true);
-
-  try {
-    state.pages = [{ name: fileName, ext: 'html' }];
-    state.localPages = await checkLocalExistence(parentPath);
-    renderResults();
-  } catch (err) {
-    renderError(err.message);
+    renderError($('#results-area'), err.message);
   }
 }
 
@@ -162,19 +142,16 @@ async function browseSinglePage(filePath) {
 
 async function loadTree() {
   state.treeLoading = true;
-  renderTree();
+  refreshTree();
 
   try {
     const files = [];
-    const path = `/${state.org}/${state.source.site}/`;
     const basePath = `/${state.org}/${state.source.site}`;
 
     const { results } = crawl({
-      path,
+      path: `${basePath}/`,
       callback: (item) => {
-        if (item.path.endsWith('.html') || item.path.endsWith('.json')) {
-          files.push(item);
-        }
+        if (item.path.endsWith('.html') || item.path.endsWith('.json')) files.push(item);
       },
       concurrent: 50,
       throttle: 3,
@@ -188,125 +165,19 @@ async function loadTree() {
   }
 
   state.treeLoading = false;
-  renderTree();
+  refreshTree();
 }
 
-function buildTreeStructure(files, basePath) {
-  const tree = {};
-  files.forEach((file) => {
-    const displayPath = file.path.replace(basePath, '');
-    const parts = displayPath.split('/').filter(Boolean);
-    let current = tree;
-    parts.forEach((part, i) => {
-      if (!current[part]) {
-        current[part] = {
-          isFile: i === parts.length - 1,
-          children: {},
-          path: `/${parts.slice(0, i + 1).join('/')}`,
-        };
-      }
-      current = current[part].children;
-    });
-  });
-  return tree;
-}
-
-function renderTree() {
-  const panel = $('#tree-panel');
-  if (!panel) return;
-
-  if (state.treeLoading) {
-    panel.innerHTML = `
-      <div class="sync-tree-loading">
-        <div class="sync-spinner"></div>
-        <p>Loading source tree…</p>
-      </div>`;
-    return;
-  }
-
-  const hasNodes = Object.keys(state.treeData).length > 0;
-  if (!hasNodes) {
-    panel.innerHTML = '<p class="sync-tree-empty">No pages found in source.</p>';
-    return;
-  }
-
-  panel.innerHTML = `
-    <ul class="sync-tree-root">
-      ${renderTreeNodes(state.treeData)}
-    </ul>`;
-  bindTreeEvents();
-}
-
-function renderTreeNodes(tree) {
-  return Object.entries(tree)
-    .sort(([a, aNode], [b, bNode]) => {
-      if (!aNode.isFile && bNode.isFile) return -1;
-      if (aNode.isFile && !bNode.isFile) return 1;
-      return a.localeCompare(b);
-    })
-    .map(([name, node]) => {
-      if (node.isFile) {
-        const displayName = name.replace(/\.(html|json)$/, '');
-        const isJson = name.endsWith('.json');
-        const fileIcon = isJson
-          ? 'icons/Smock_FileData_18_N.svg'
-          : 'icons/Smock_FileHTML_18_N.svg';
-        return `<li class="sync-tree-item sync-tree-file" data-path="${node.path}">
-          <img class="sync-tree-icon" src="${fileIcon}" alt="">
-          <span class="sync-tree-label">${displayName}</span>
-        </li>`;
-      }
-      const hasChildren = Object.keys(node.children).length > 0;
-      return `<li class="sync-tree-item sync-tree-folder">
-        <div class="sync-tree-folder-row" data-path="${node.path}">
-          <span class="sync-tree-arrow">▶</span>
-          <img class="sync-tree-icon" src="icons/Smock_Folder_18_N.svg" alt="">
-          <span class="sync-tree-label">${name}</span>
-        </div>
-        ${hasChildren ? `<ul class="sync-tree-children hidden">
-          ${renderTreeNodes(node.children)}
-        </ul>` : ''}
-      </li>`;
-    })
-    .join('');
-}
-
-function bindTreeEvents() {
-  document.querySelectorAll('.sync-tree-folder-row').forEach((row) => {
-    row.addEventListener('click', () => {
-      const children = row.nextElementSibling;
-      if (children) {
-        children.classList.toggle('hidden');
-        const isOpen = !children.classList.contains('hidden');
-        const arrow = row.querySelector('.sync-tree-arrow');
-        arrow.textContent = isOpen ? '▼' : '▶';
-        const icon = row.querySelector('.sync-tree-icon');
-        icon.src = isOpen
-          ? 'icons/Smock_FolderOpen_18_N.svg'
-          : 'icons/Smock_Folder_18_N.svg';
-      }
-      highlightTreeItem(row);
-      browse(row.dataset.path);
-    });
-  });
-
-  document.querySelectorAll('.sync-tree-file').forEach((file) => {
-    file.addEventListener('click', () => {
-      highlightTreeItem(file);
-      browseSinglePage(file.dataset.path);
-    });
-  });
-}
-
-function highlightTreeItem(el) {
-  document.querySelectorAll('.sync-tree-active').forEach((item) => {
-    item.classList.remove('sync-tree-active');
-  });
-  el.classList.add('sync-tree-active');
+function refreshTree() {
+  renderTree(
+    $('#tree-panel'), state.treeData, state.treeLoading,
+    { loading: 'Loading source tree…', empty: 'No pages found in source.' },
+    browse,
+  );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Copy action                                                        */
+/*  Copy & Delete                                                      */
 /* ------------------------------------------------------------------ */
 
 async function onCopy(pageName) {
@@ -336,9 +207,8 @@ async function onCopy(pageName) {
 async function onDelete(pageName) {
   const pagePath = getPagePath(pageName);
   // eslint-disable-next-line no-alert
-  if (!window.confirm(`Remove ${pageName} from this site? The file will be deleted; a later rollout will not see a local copy at this path.`)) {
-    return;
-  }
+  if (!window.confirm(`Remove ${pageName} from this site? The file will be deleted; a later rollout will not see a local copy at this path.`)) return;
+
   state.copyStatuses[pageName] = 'deleting';
   renderResultsTable();
 
@@ -375,24 +245,24 @@ function render(container) {
       </div>
     </section>
 
-    <div class="sync-layout">
-      <aside class="sync-tree-panel">
-        <div class="sync-tree-header">
+    <div class="sc-layout">
+      <aside class="sc-tree-panel">
+        <div class="sc-tree-header">
           <h3>Source Pages</h3>
         </div>
-        <div class="sync-tree-body" id="tree-panel">
-          <div class="sync-tree-loading">
-            <div class="sync-spinner"></div>
+        <div class="sc-tree-body" id="tree-panel">
+          <div class="sc-tree-loading">
+            <div class="sc-spinner"></div>
             <p>Loading source tree…</p>
           </div>
         </div>
       </aside>
 
-      <div class="sync-content">
+      <div class="sc-content">
         <div id="breadcrumb-area"></div>
         <div id="results-area">
-          <div class="sync-empty">
-            <div class="sync-empty-icon">📂</div>
+          <div class="sc-empty">
+            <div class="sc-empty-icon">📂</div>
             <h3>Select a folder or page</h3>
             <p>Browse the source tree to find pages to copy into your site.</p>
           </div>
@@ -405,50 +275,25 @@ function render(container) {
   loadTree();
 }
 
-function renderBreadcrumb() {
-  const parts = state.currentPath.split('/').filter(Boolean);
-  let crumbs = '<a href="#" class="sync-bc-link" data-path="/">root</a>';
-  let accumulated = '';
-  parts.forEach((p, i) => {
-    accumulated += `/${p}`;
-    const sep = '<span class="sync-bc-sep">/</span>';
-    if (i === parts.length - 1) {
-      crumbs += `${sep}<span class="sync-bc-current">${p}</span>`;
-    } else {
-      crumbs += `${sep}<a href="#" class="sync-bc-link" data-path="${accumulated}">${p}</a>`;
-    }
-  });
-
-  const area = $('#breadcrumb-area');
-  area.innerHTML = `<nav class="sync-breadcrumb">${crumbs}</nav>`;
-  area.querySelectorAll('.sync-bc-link').forEach((link) => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      browse(link.dataset.path);
-    });
-  });
-}
-
 function renderResults(loading = false) {
   if (loading) {
     $('#results-area').innerHTML = `
-      <div class="sync-results-card">
-        <div class="sync-loading" style="min-height:200px">
-          <div class="sync-spinner"></div>
+      <div class="sc-results-card">
+        <div class="sc-loading" style="min-height:200px">
+          <div class="sc-spinner"></div>
           <p>Loading content…</p>
         </div>
       </div>`;
     return;
   }
 
-  renderBreadcrumb();
+  renderBreadcrumb($('#breadcrumb-area'), state.currentPath, browse);
 
-  const hasContent = state.pages.length > 0 || state.folders.length > 0;
-  if (!hasContent) {
+  if (!state.pages.length && !state.folders.length) {
     $('#results-area').innerHTML = `
-      <div class="sync-results-card">
-        <div class="sync-empty">
-          <div class="sync-empty-icon">📂</div>
+      <div class="sc-results-card">
+        <div class="sc-empty">
+          <div class="sc-empty-icon">📂</div>
           <h3>No content found</h3>
           <p>No pages found at <strong>${state.currentPath}</strong> in the source site.</p>
         </div>
@@ -456,20 +301,19 @@ function renderResults(loading = false) {
     return;
   }
 
-  let foldersHtml = '';
-  if (state.folders.length) {
-    foldersHtml = `<div class="sync-folders">
+  const foldersHtml = state.folders.length
+    ? `<div class="sc-folders">
       ${state.folders.map((f) => {
-    const folderPath = `${state.currentPath.replace(/\/+$/, '')}/${f.name}`;
-    return `<a href="#" class="sync-folder" data-path="${folderPath}">
-              <span class="sync-folder-icon">📁</span>${f.name}
+    const p = `${state.currentPath.replace(/\/+$/, '')}/${f.name}`;
+    return `<a href="#" class="sc-folder" data-path="${p}">
+              <span class="sc-folder-icon">📁</span>${f.name}
             </a>`;
   }).join('')}
-    </div>`;
-  }
+    </div>`
+    : '';
 
-  const filterHtml = state.pages.length > 0
-    ? `<div class="sync-filter-row">
+  const filterHtml = state.pages.length
+    ? `<div class="sc-filter-row">
         <sl-input id="filter-input" type="text"
                placeholder="Filter results by name…"></sl-input>
       </div>`
@@ -478,13 +322,13 @@ function renderResults(loading = false) {
   const resultsArea = $('#results-area');
   resultsArea.innerHTML = `
     ${foldersHtml}
-    <div class="sync-results-card" id="results-card">
-      <div class="sync-results-header">
+    <div class="sc-results-card" id="results-card">
+      <div class="sc-results-header">
         <h3>Pages in Source</h3>
-        <span class="sync-results-count">${state.pages.length} page${state.pages.length !== 1 ? 's' : ''}</span>
+        <span class="sc-results-count">${state.pages.length} page${state.pages.length !== 1 ? 's' : ''}</span>
       </div>
       ${filterHtml}
-      <div class="sync-table-wrap" id="table-wrap"></div>
+      <div class="sc-table-wrap" id="table-wrap"></div>
     </div>`;
 
   renderResultsTable();
@@ -494,7 +338,7 @@ function renderResults(loading = false) {
     renderResultsTable();
   });
 
-  resultsArea.querySelectorAll('.sync-folder').forEach((f) => {
+  resultsArea.querySelectorAll('.sc-folder').forEach((f) => {
     f.addEventListener('click', (e) => {
       e.preventDefault();
       browse(f.dataset.path);
@@ -511,7 +355,7 @@ function renderResultsTable() {
     : state.pages;
 
   wrap.innerHTML = `
-    <table class="sync-table">
+    <table class="sc-table">
       <thead>
         <tr>
           <th>Page</th>
@@ -525,16 +369,13 @@ function renderResultsTable() {
     </table>`;
 
   if (!filtered.length) {
-    wrap.innerHTML += `<div class="sync-empty" style="padding:24px">
-      <p>No pages match the filter.</p>
-    </div>`;
+    wrap.innerHTML += '<div class="sc-empty" style="padding:24px"><p>No pages match the filter.</p></div>';
   }
 
   bindTableEvents();
 }
 
 function renderRow(page) {
-  const displayName = page.name.replace(/\.html$/, '');
   const pagePath = getPagePath(page.name);
   const existsLocally = state.localPages.has(page.name);
   const copyStatus = state.copyStatuses[page.name];
@@ -568,7 +409,8 @@ function renderRow(page) {
     btnLabel = 'Copy';
   }
 
-  const actionsHtml = existsLocally && !['copying', 'deleting', 'copied'].includes(copyStatus || '')
+  const showDelete = existsLocally && !['copying', 'deleting', 'copied'].includes(copyStatus || '');
+  const actionsHtml = showDelete
     ? `<span class="sync-action-group">
         <sl-button class="sync-copy-btn" data-page="${page.name}" ${btnDisabled}>${btnLabel}</sl-button>
         <sl-button class="sync-delete-btn" variant="neutral" data-page="${page.name}" ${btnDisabled}>Delete</sl-button>
@@ -577,60 +419,12 @@ function renderRow(page) {
 
   return `<tr data-page="${page.name}">
     <td>
-      <span class="sync-page-name">${displayName}</span>
-      <span class="sync-page-path">${pagePath}</span>
+      <span class="sc-page-name">${page.name.replace(/\.html$/, '')}</span>
+      <span class="sc-page-path">${pagePath}</span>
     </td>
     <td>${badge}</td>
-    <td>
-      ${actionsHtml}
-      ${editLink}
-    </td>
+    <td>${actionsHtml}${editLink}</td>
   </tr>`;
-}
-
-function renderLog() {
-  const area = $('#log-area');
-  if (!state.log.length) {
-    area.innerHTML = '';
-    return;
-  }
-
-  const iconMap = {
-    success: '<img src="icons/CheckmarkSize100.svg" alt="success">',
-    error: '<img src="icons/CrossSize100.svg" alt="error">',
-    info: '<img src="icons/InfoSmall.svg" alt="info">',
-    warn: '<img src="icons/AlertSmall.svg" alt="warning">',
-  };
-
-  area.innerHTML = `
-    <div class="sync-log">
-      <div class="sync-log-header">
-        <h3>Activity Log</h3>
-        <sl-button id="clear-log-btn">Clear</sl-button>
-      </div>
-      <div class="sync-log-entries">
-        ${state.log.slice().reverse().map((entry) => `
-          <div class="sync-log-entry sync-log-${entry.type}">
-            <span class="sync-log-icon">${iconMap[entry.type] || 'ℹ'}</span>
-            <span class="sync-log-time">${entry.time}</span>
-            <span>${entry.message}</span>
-          </div>
-        `).join('')}
-      </div>
-    </div>`;
-
-  $('#clear-log-btn')?.addEventListener('click', () => {
-    state.log = [];
-    area.innerHTML = '';
-  });
-
-  const entries = area.querySelector('.sync-log-entries');
-  if (entries) entries.scrollTop = 0;
-}
-
-function renderError(message) {
-  const area = $('#results-area');
-  area.innerHTML = `<div class="sync-error-banner">${message}</div>`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -640,14 +434,12 @@ function renderError(message) {
 function bindTableEvents() {
   document.querySelectorAll('.sync-copy-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const { page } = btn.dataset;
-      if (page) onCopy(page);
+      if (btn.dataset.page) onCopy(btn.dataset.page);
     });
   });
   document.querySelectorAll('.sync-delete-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const { page } = btn.dataset;
-      if (page) onDelete(page);
+      if (btn.dataset.page) onDelete(btn.dataset.page);
     });
   });
 }
