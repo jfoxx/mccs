@@ -172,9 +172,12 @@ async function loadTree() {
 
 function refreshTree() {
   renderTree(
-    $('#tree-panel'), state.treeData, state.treeLoading,
+    $('#tree-panel'),
+    state.treeData,
+    state.treeLoading,
     { loading: 'Loading source folders…', empty: 'No folders found in source.' },
-    browse, state.currentPath,
+    browse,
+    state.currentPath,
   );
 }
 

@@ -27,13 +27,12 @@ function getFoldersAtPath(treeData, treePath) {
   let node = treeData;
   if (treePath !== '/') {
     const parts = treePath.split('/').filter(Boolean);
-    for (const part of parts) {
-      if (node[part]) {
-        node = node[part].children;
-      } else {
-        return [];
-      }
-    }
+    const missing = parts.some((part) => {
+      if (!node[part]) return true;
+      node = node[part].children;
+      return false;
+    });
+    if (missing) return [];
   }
   return Object.entries(node)
     .filter(([, n]) => !n.isFile)

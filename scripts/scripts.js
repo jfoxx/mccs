@@ -4,10 +4,12 @@ import {
   loadFooter,
   decorateButtons,
   decorateIcons,
+  decorateBlock,
   decorateBlocks,
   decorateTemplateAndTheme,
   getMetadata,
   waitForFirstImage,
+  loadBlock,
   loadSection,
   loadSections,
   loadCSS,
@@ -212,7 +214,6 @@ if (getMetadata('target')) {
     getAndApplyOffers();
   });
 }
-
 
 /**
  * Decorates the main element.

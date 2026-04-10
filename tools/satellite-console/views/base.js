@@ -214,9 +214,12 @@ async function loadTree() {
 
 function refreshTree() {
   renderTree(
-    $('#tree-panel'), state.treeData, state.treeLoading,
+    $('#tree-panel'),
+    state.treeData,
+    state.treeLoading,
     { loading: 'Loading folder tree…', empty: 'No folders found.' },
-    browse, state.currentPath,
+    browse,
+    state.currentPath,
   );
 }
 
@@ -503,7 +506,11 @@ function renderResultsCells() {
 
     const [pageName, targetSite] = key.split('::');
     td.innerHTML = siteCellContent(
-      key, state.statuses[key], state.actions[key] || 'skip', targetSite, getPagePath(pageName),
+      key,
+      state.statuses[key],
+      state.actions[key] || 'skip',
+      targetSite,
+      getPagePath(pageName),
     );
   });
 

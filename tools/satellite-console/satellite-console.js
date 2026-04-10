@@ -41,7 +41,8 @@ function resolveConfig(rows, site) {
 
   const satRow = parsed.find((r) => r.satellite === site);
   if (satRow) {
-    const sourceTitle = parsed.find((r) => r.base === satRow.base && !r.satellite)?.title || satRow.base;
+    const baseRow = parsed.find((r) => r.base === satRow.base && !r.satellite);
+    const sourceTitle = baseRow?.title || satRow.base;
     return {
       role: 'satellite',
       title: satRow.title || site,
@@ -73,10 +74,14 @@ async function init() {
     const container = $('#main-content');
     if (config.role === 'base') {
       const { initBase } = await import('./views/base.js');
-      initBase({ org, site, token, config, container });
+      initBase({
+        org, site, token, config, container,
+      });
     } else {
       const { initSatellite } = await import('./views/satellite.js');
-      initSatellite({ org, site, token, actions, config, container });
+      initSatellite({
+        org, site, token, actions, config, container,
+      });
     }
   } catch (err) {
     $('#app').innerHTML = `

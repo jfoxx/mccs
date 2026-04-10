@@ -9,5 +9,6 @@ scripts/__dropins__
 scripts/commerce-events-collector.js
 scripts/commerce-events-sdk.js
 scripts/commerce.js
+scripts/at.js
 plugins/
 cypress/
