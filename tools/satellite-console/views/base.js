@@ -128,11 +128,14 @@ async function browse(path, isSingleFile = false) {
       state.sites.forEach((s) => {
         const key = actionKey(page.name, s.site);
         state.actions[key] = 'skip';
-        state.statuses[key] = state.siteContent[s.site]?.has(page.name) ? 'exists' : 'missing';
+        state.statuses[key] = state.siteContent[s.site]?.has(page.name) ? 'authored' : 'missing';
       });
     });
 
     renderResults();
+    await checkAemStatuses();
+    renderResultsCells();
+    renderActionBar();
   } catch (err) {
     renderError($('#results-area'), err.message);
   }
@@ -145,6 +148,36 @@ async function checkSiteExistence(path) {
       items.filter((i) => i.ext === 'html').map((i) => i.name),
     );
   }));
+}
+
+async function checkAemStatus(targetSite, pagePath) {
+  const aemPath = pagePath.replace(/\.html$/, '');
+  try {
+    const resp = await daFetch(`${AEM_ORIGIN}/status/${state.org}/${targetSite}/main${aemPath}`);
+    if (!resp.ok) return 'authored';
+    const data = await resp.json();
+    if (data.live?.lastModified) return 'sat-published';
+    if (data.preview?.lastModified) return 'sat-previewed';
+    return 'authored';
+  } catch {
+    return 'authored';
+  }
+}
+
+async function checkAemStatuses() {
+  const checks = [];
+  state.pages.forEach((page) => {
+    state.sites.forEach((s) => {
+      const key = actionKey(page.name, s.site);
+      if (state.statuses[key] !== 'authored') return;
+      checks.push(
+        checkAemStatus(s.site, getPagePath(page.name)).then((status) => {
+          state.statuses[key] = status;
+        }),
+      );
+    });
+  });
+  await Promise.all(checks);
 }
 
 /* ------------------------------------------------------------------ */
@@ -433,7 +466,9 @@ function renderRow(page) {
 
 function siteCellContent(key, status, currentAction, targetSite, pagePath) {
   const badgeMap = {
-    exists: '<span class="sc-badge sc-badge-exists">Exists</span>',
+    authored: '<span class="sc-badge sc-badge-authored">Cancelled</span>',
+    'sat-previewed': '<span class="sc-badge sc-badge-sat-previewed">Previewed</span>',
+    'sat-published': '<span class="sc-badge sc-badge-sat-published">Published</span>',
     missing: '<span class="sc-badge sc-badge-missing">Not found</span>',
     previewed: '<span class="sc-badge sc-badge-previewed">Previewed</span>',
     published: '<span class="sc-badge sc-badge-published">Published</span>',
@@ -445,7 +480,7 @@ function siteCellContent(key, status, currentAction, targetSite, pagePath) {
   const checked = currentAction === 'overwrite' ? 'checked' : '';
 
   let previewLink = '';
-  if (status === 'previewed' || status === 'published') {
+  if (['previewed', 'published', 'sat-previewed', 'sat-published'].includes(status)) {
     previewLink = `<a href="${previewUrl(targetSite, pagePath)}" target="_blank" class="sc-preview-link">↗ Preview</a>`;
   }
 

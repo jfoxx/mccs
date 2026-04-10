@@ -90,7 +90,8 @@ function editUrl(pagePath) {
 }
 
 function getPagePath(pageName) {
-  return `${state.currentPath.replace(/\/+$/, '')}/${pageName}`;
+  const name = pageName.endsWith('.html') ? pageName : `${pageName}.html`;
+  return `${state.currentPath.replace(/\/+$/, '')}/${name}`;
 }
 
 function refreshLog() {
@@ -419,7 +420,7 @@ function renderRow(page) {
       <span class="sc-page-path">${pagePath}</span>
     </td>
     <td>${badge}</td>
-    <td>${actionsHtml}${editLink}</td>
+    <td><div class="sync-actions-cell">${actionsHtml}${editLink}</div></td>
   </tr>`;
 }
 

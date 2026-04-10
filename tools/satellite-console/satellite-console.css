@@ -626,7 +626,9 @@
   border-radius: 100px;
 }
 
-.sc-badge-exists { background: #cef5e4; color: #12805c; }
+.sc-badge-authored { background: #ffe0e1; color: #d7373f; }
+.sc-badge-sat-previewed { background: #ece1ff; color: #7e4fdb; }
+.sc-badge-sat-published { background: #cef5e4; color: #12805c; }
 .sc-badge-missing { background: #f5f5f5; color: #8e8e8e; border: 1px solid #e1e1e1; }
 .sc-badge-previewed { background: #ece1ff; color: #7e4fdb; }
 .sc-badge-published { background: #cef5e4; color: #107154; }
@@ -772,10 +774,15 @@
   color: #6e6e6e;
 }
 
+.sync-actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .sync-action-group {
   display: inline-flex;
   gap: 8px;
-  flex-wrap: wrap;
   align-items: center;
 }
 
